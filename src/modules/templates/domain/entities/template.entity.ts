@@ -4,8 +4,6 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
   OneToMany,
   Unique,
 } from 'typeorm';
@@ -15,26 +13,26 @@ import { NotificationTemplateVersionEntity } from './template-version.entity';
 @Unique('uq_template_tenant_code', ['tenantId', 'code'])
 export class NotificationTemplateEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid', name: 'tenant_id' })
-  tenantId: string;
+  tenantId!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  code: string;
+  code!: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string | null;
+  description!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @OneToMany(
     () => NotificationTemplateVersionEntity,
     (v) => v.template,
   )
-  versions: NotificationTemplateVersionEntity[];
+  versions!: NotificationTemplateVersionEntity[];
 }

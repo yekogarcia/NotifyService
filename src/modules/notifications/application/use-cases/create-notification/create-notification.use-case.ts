@@ -1,19 +1,16 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { CreateNotificationDTO } from '../../dto/create-notification.dto';
 import { validateRecipients } from './validate-recipients';
 import { ValidateTemplateUseCase } from './validate-template';
 import { IdempotencyCheckUseCase } from './idempotency-check';
-import { NotificationRepository } from '../../../domain/repositories';
 import { NotificationEntity } from '../../../domain/entities/notification.entity';
 import { NotificationRecipientEntity } from '../../../domain/entities/notification-recipient.entity';
 import { NotificationDeliveryEntity } from '../../../domain/entities/notification-delivery.entity';
 import {
   NotificationStatus,
   DeliveryStatus,
-  ChannelType,
 } from '../../../domain/enums';
 import { NOTIFICATION_QUEUE } from '../../../../../shared/infrastructure/queue/queue.module';
 import { Queue } from 'bullmq';
@@ -31,7 +28,6 @@ export class CreateNotificationUseCase {
   private readonly queue: Queue;
 
   constructor(
-    private readonly notificationRepo: NotificationRepository,
     private readonly idempotencyCheck: IdempotencyCheckUseCase,
     private readonly validateTemplate: ValidateTemplateUseCase,
     private readonly dataSource: DataSource,

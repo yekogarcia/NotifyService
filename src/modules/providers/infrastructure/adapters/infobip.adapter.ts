@@ -1,4 +1,4 @@
-import { ProviderResult } from '../domain/email-provider.interface';
+import { ProviderResult } from '../../domain/email-provider.interface';
 
 export class InfobipAdapter {
   private readonly baseUrl: string;

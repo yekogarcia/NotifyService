@@ -6,7 +6,6 @@ import {
   ValidateNested,
   ArrayMinSize,
   IsEnum,
-  ValidateIf,
   IsEmail,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -16,7 +15,7 @@ import { ChannelType, RecipientType } from '../../../notifications/domain/enums'
 export class RecipientDTO {
   @ApiProperty({ enum: RecipientType })
   @IsEnum(RecipientType)
-  recipientType: RecipientType;
+  recipientType!: RecipientType;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -38,17 +37,17 @@ export class CreateNotificationDTO {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  sourceSystem: string;
+  sourceSystem!: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  eventType: string;
+  eventType!: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  idempotencyKey: string;
+  idempotencyKey!: string;
 
   @ApiPropertyOptional({ type: RecipientDTO })
   @IsOptional()
@@ -68,12 +67,12 @@ export class CreateNotificationDTO {
   @IsArray()
   @ArrayMinSize(1)
   @IsEnum(ChannelType, { each: true })
-  channels: ChannelType[];
+  channels!: ChannelType[];
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  templateCode: string;
+  templateCode!: string;
 
   @ApiPropertyOptional()
   @IsOptional()

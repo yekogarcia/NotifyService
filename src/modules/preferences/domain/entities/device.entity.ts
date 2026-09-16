@@ -14,26 +14,26 @@ import { Platform } from '../../../notifications/domain/enums';
 @Index('idx_devices_tenant_user', ['tenantId', 'userId'])
 export class DeviceEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid', name: 'tenant_id' })
-  tenantId: string;
+  tenantId!: string;
 
   @Column({ type: 'varchar', length: 255, name: 'user_id' })
-  userId: string;
+  userId!: string;
 
   @Column({ type: 'varchar', length: 500, name: 'device_token' })
-  deviceToken: string;
+  deviceToken!: string;
 
   @Column({ type: 'varchar', length: 20 })
-  platform: Platform;
+  platform!: Platform;
 
   @Column({ type: 'boolean', name: 'is_active', default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt!: Date;
 }

@@ -27,6 +27,6 @@
       "src/*": ["src/*"]
     }
   },
-  "include": ["src/**/*", "data-source.ts", "migrations/**/*"],
+  "include": ["src/**/*", "src/data-source.ts", "migrations/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import IORedis from 'ioredis';
@@ -6,9 +6,9 @@ import { NotificationProviderEntity } from '../domain/entities/provider.entity';
 import { EmailProvider } from '../domain/email-provider.interface';
 import { SmsProvider } from '../domain/sms-provider.interface';
 import { PushProvider } from '../domain/push-provider.interface';
-import { SesAdapter } from '../infrastructure/adapters/ses.adapter';
-import { TwilioAdapter } from '../infrastructure/adapters/twilio.adapter';
-import { FcmAdapter } from '../infrastructure/adapters/fcm.adapter';
+import { SesAdapter, SesAdapterConfig } from '../infrastructure/adapters/ses.adapter';
+import { TwilioAdapter, TwilioAdapterConfig } from '../infrastructure/adapters/twilio.adapter';
+import { FcmAdapter, FcmAdapterConfig } from '../infrastructure/adapters/fcm.adapter';
 import { SendGridAdapter } from '../infrastructure/adapters/sendgrid.adapter';
 import { InfobipAdapter } from '../infrastructure/adapters/infobip.adapter';
 import { ChannelType, ProviderType } from '../../notifications/domain/enums';
@@ -23,7 +23,6 @@ interface ProviderChannelMapping {
 
 @Injectable()
 export class ProviderRegistry {
-  private readonly logger = new Logger(ProviderRegistry.name);
   private cache: IORedis | null = null;
 
   constructor(
@@ -80,15 +79,15 @@ export class ProviderRegistry {
   ): EmailProvider | SmsProvider | PushProvider {
     switch (mapping.providerType) {
       case ProviderType.SES:
-        return new SesAdapter(mapping.config, mapping.secretRef);
+        return new SesAdapter({ ...mapping.config, secretRef: mapping.secretRef } as SesAdapterConfig);
       case ProviderType.SENDGRID:
         return new SendGridAdapter(mapping.config, mapping.secretRef);
       case ProviderType.TWILIO:
-        return new TwilioAdapter(mapping.config, mapping.secretRef);
+        return new TwilioAdapter({ ...mapping.config, secretRef: mapping.secretRef } as unknown as TwilioAdapterConfig);
       case ProviderType.INFOBIP:
         return new InfobipAdapter(mapping.config, mapping.secretRef);
       case ProviderType.FCM:
-        return new FcmAdapter(mapping.config, mapping.secretRef);
+        return new FcmAdapter({ serviceAccountKey: mapping.config.serviceAccountKey } as FcmAdapterConfig);
       default:
         throw new Error(`Unknown provider type: ${mapping.providerType}`);
     }

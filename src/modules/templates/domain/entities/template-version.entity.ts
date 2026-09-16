@@ -19,36 +19,36 @@ import { NotificationTemplateEntity } from './template.entity';
 ])
 export class NotificationTemplateVersionEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid', name: 'template_id' })
-  templateId: string;
+  templateId!: string;
 
   @Column({ type: 'int' })
-  version: number;
+  version!: number;
 
   @Column({ type: 'varchar', length: 10 })
-  language: string;
+  language!: string;
 
   @Column({ type: 'varchar', length: 20 })
-  channel: ChannelType;
+  channel!: ChannelType;
 
   @Column({ type: 'text', nullable: true })
-  subject: string | null;
+  subject!: string | null;
 
   @Column({ type: 'text' })
-  body: string;
+  body!: string;
 
   @Column({ type: 'boolean', name: 'is_active', default: false })
-  isActive: boolean;
+  isActive!: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @Column({ type: 'timestamptz', name: 'activated_at', nullable: true })
-  activatedAt: Date | null;
+  activatedAt!: Date | null;
 
   @ManyToOne(() => NotificationTemplateEntity, (t) => t.versions)
   @JoinColumn({ name: 'template_id' })
-  template: NotificationTemplateEntity;
+  template!: NotificationTemplateEntity;
 }

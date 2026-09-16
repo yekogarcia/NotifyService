@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { NotificationTemplateEntity } from '../../domain/entities/template.entity';
 import { NotificationTemplateVersionEntity } from '../../domain/entities/template-version.entity';
 import { ChannelType } from '../../../notifications/domain/enums';

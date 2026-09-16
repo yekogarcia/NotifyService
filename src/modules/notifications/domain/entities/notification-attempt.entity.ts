@@ -4,7 +4,6 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-  Index,
   Unique,
 } from 'typeorm';
 import { AttemptResult } from '../enums';
@@ -14,16 +13,16 @@ import { NotificationDeliveryEntity } from './notification-delivery.entity';
 @Unique('uq_attempt_delivery_number', ['deliveryId', 'attemptNumber'])
 export class NotificationAttemptEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid', name: 'delivery_id' })
-  deliveryId: string;
+  deliveryId!: string;
 
   @Column({ type: 'int', name: 'attempt_number' })
-  attemptNumber: number;
+  attemptNumber!: number;
 
   @Column({ type: 'varchar', length: 20 })
-  result: AttemptResult;
+  result!: AttemptResult;
 
   @Column({
     type: 'varchar',
@@ -31,18 +30,18 @@ export class NotificationAttemptEntity {
     name: 'provider_message_id',
     nullable: true,
   })
-  providerMessageId: string | null;
+  providerMessageId!: string | null;
 
   @Column({ type: 'varchar', length: 100, name: 'error_type', nullable: true })
-  errorType: string | null;
+  errorType!: string | null;
 
   @Column({ type: 'text', name: 'error_message', nullable: true })
-  errorMessage: string | null;
+  errorMessage!: string | null;
 
   @Column({ type: 'timestamptz', name: 'attempted_at' })
-  attemptedAt: Date;
+  attemptedAt!: Date;
 
   @ManyToOne(() => NotificationDeliveryEntity, (d) => d.attempts)
   @JoinColumn({ name: 'delivery_id' })
-  delivery: NotificationDeliveryEntity;
+  delivery!: NotificationDeliveryEntity;
 }

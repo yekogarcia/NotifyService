@@ -7,9 +7,9 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Queue } from 'bullmq';
-import { NOTIFICATION_QUEUE } from '../../../shared/infrastructure/queue/queue.module';
-import { RedisService } from '../../../shared/infrastructure/queue/redis.service';
-import { DeliveryStatus } from '../../notifications/domain/enums';
+import { NOTIFICATION_QUEUE } from '../../../../shared/infrastructure/queue/queue.module';
+import { RedisService } from '../../../../shared/infrastructure/queue/redis.service';
+import { DeliveryStatus } from '../../../notifications/domain/enums';
 
 @ApiTags('deliveries')
 @Controller('deliveries')

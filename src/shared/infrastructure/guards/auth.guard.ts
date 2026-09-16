@@ -13,11 +13,9 @@ type AuthenticatedRequest = FastifyRequest & {
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly apiKey: string;
-  private readonly jwtSecret: string;
 
   constructor() {
     this.apiKey = process.env.API_KEY ?? 'dev-api-key';
-    this.jwtSecret = process.env.JWT_SECRET ?? 'dev-jwt-secret';
   }
 
   canActivate(context: ExecutionContext): boolean {

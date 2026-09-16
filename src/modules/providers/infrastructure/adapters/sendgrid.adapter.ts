@@ -1,10 +1,10 @@
-import { ProviderResult } from '../domain/email-provider.interface';
+import { ProviderResult } from '../../domain/email-provider.interface';
 
 export class SendGridAdapter {
   private readonly apiKey: string;
 
   constructor(
-    config: Record<string, unknown>,
+    _config: Record<string, unknown>,
     secretRef: string,
   ) {
     this.apiKey = process.env[secretRef] ?? '';

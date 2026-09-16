@@ -19,16 +19,16 @@ class RegisterDeviceDTO {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  userId: string;
+  userId!: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  deviceToken: string;
+  deviceToken!: string;
 
   @ApiProperty({ enum: Platform })
   @IsEnum(Platform)
-  platform: Platform;
+  platform!: Platform;
 }
 
 @ApiTags('devices')

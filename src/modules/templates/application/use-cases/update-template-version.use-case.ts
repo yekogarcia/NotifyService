@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { NotificationTemplateVersionEntity } from '../../domain/entities/template-version.entity';
+import { ChannelType } from '../../../notifications/domain/enums';
 
 @Injectable()
 export class UpdateTemplateVersionUseCase {
@@ -15,7 +16,7 @@ export class UpdateTemplateVersionUseCase {
     templateId: string,
     version: number,
     language: string,
-    channel: string,
+    channel: ChannelType,
   ): Promise<NotificationTemplateVersionEntity> {
     return this.dataSource.transaction(async (manager) => {
       await manager
@@ -48,7 +49,7 @@ export class UpdateTemplateVersionUseCase {
     templateId: string,
     version: number,
     language: string,
-    channel: string,
+    channel: ChannelType,
   ): Promise<NotificationTemplateVersionEntity> {
     const target = await this.versionRepo.findOne({
       where: { templateId, version, language, channel },

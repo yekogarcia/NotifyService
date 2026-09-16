@@ -3,7 +3,7 @@ import { Queue } from 'bullmq';
 import { RetryPolicy } from '../domain/retry-policy';
 import { BackoffStrategy } from '../domain/backoff-strategy';
 import { AttemptResult } from '../../notifications/domain/enums';
-import { NOTIFICATION_QUEUE, RETRY_QUEUE } from '../../../shared/infrastructure/queue/queue.module';
+import { RETRY_QUEUE } from '../../../shared/infrastructure/queue/queue.module';
 import { RedisService } from '../../../shared/infrastructure/queue/redis.service';
 
 @Injectable()

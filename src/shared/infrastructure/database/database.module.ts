@@ -11,7 +11,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         type: 'postgres',
         url: configService.get<string>(
           'DATABASE_URL',
-          'postgresql://localhost:5432/notitify',
+          'postgresql://localhost:5432/notifications',
         ),
         entities: [__dirname + '/../../modules/**/domain/entities/*.entity{.ts,.js}'],
         migrations: [__dirname + '/../../../migrations/*{.ts,.js}'],

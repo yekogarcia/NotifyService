@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  Inject,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,6 +25,7 @@ import { NotificationRepository } from '../../domain/repositories';
 export class NotificationController {
   constructor(
     private readonly createNotification: CreateNotificationUseCase,
+    @Inject('NotificationRepository')
     private readonly notificationRepo: NotificationRepository,
   ) {}
 
@@ -35,7 +37,7 @@ export class NotificationController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(@Body() dto: CreateNotificationDTO) {
-    const tenantId = 'default-tenant';
+    const tenantId = 'db4acf04-d101-4d9b-8fe2-9513992b7c2a';
     const result = await this.createNotification.execute(tenantId, dto);
     return result;
   }

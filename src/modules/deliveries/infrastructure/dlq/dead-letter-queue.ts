@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import { DEAD_LETTER_QUEUE } from '../../../shared/infrastructure/queue/queue.module';
-import { RedisService } from '../../../shared/infrastructure/queue/redis.service';
-import { DeliveryStatus } from '../../notifications/domain/enums';
+import { DEAD_LETTER_QUEUE } from '../../../../shared/infrastructure/queue/queue.module';
+import { RedisService } from '../../../../shared/infrastructure/queue/redis.service';
 
 @Injectable()
 export class DeadLetterQueue {

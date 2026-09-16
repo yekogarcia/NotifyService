@@ -25,11 +25,11 @@ import { PreferenceEntity } from '../../domain/entities/preference.entity';
 class PreferenceItemDTO {
   @ApiProperty({ enum: ChannelType })
   @IsEnum(ChannelType)
-  channel: ChannelType;
+  channel!: ChannelType;
 
   @ApiProperty()
   @IsBoolean()
-  enabled: boolean;
+  enabled!: boolean;
 }
 
 class SetPreferencesDTO {
@@ -38,7 +38,7 @@ class SetPreferencesDTO {
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => PreferenceItemDTO)
-  preferences: PreferenceItemDTO[];
+  preferences!: PreferenceItemDTO[];
 }
 
 @ApiTags('preferences')

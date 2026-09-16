@@ -27,7 +27,7 @@ async function bootstrap() {
   app.enableCors();
 
   const config = new DocumentBuilder()
-    .setTitle('NotitifyService API')
+    .setTitle('NotifyService API')
     .setDescription('Multi-channel notification service')
     .setVersion('0.1.0')
     .addApiKey({ type: 'apiKey', name: 'X-API-Key', in: 'header' }, 'api-key')

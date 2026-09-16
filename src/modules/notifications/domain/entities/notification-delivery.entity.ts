@@ -19,32 +19,32 @@ import { NotificationAttemptEntity } from './notification-attempt.entity';
 @Index('idx_delivery_recipient_channel', ['recipientId', 'channel'])
 export class NotificationDeliveryEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid', name: 'notification_id' })
-  notificationId: string;
+  notificationId!: string;
 
   @Column({ type: 'uuid', name: 'recipient_id' })
-  recipientId: string;
+  recipientId!: string;
 
   @Column({ type: 'varchar', length: 20 })
-  channel: ChannelType;
+  channel!: ChannelType;
 
   @Column({ type: 'uuid', name: 'provider_id', nullable: true })
-  providerId: string | null;
+  providerId!: string | null;
 
   @Column({
     type: 'varchar',
     length: 20,
     default: DeliveryStatus.CREATED,
   })
-  status: DeliveryStatus;
+  status!: DeliveryStatus;
 
   @Column({ type: 'int', name: 'attempt_count', default: 0 })
-  attemptCount: number;
+  attemptCount!: number;
 
   @Column({ type: 'int', name: 'max_attempts', default: 3 })
-  maxAttempts: number;
+  maxAttempts!: number;
 
   @Column({
     type: 'varchar',
@@ -52,25 +52,25 @@ export class NotificationDeliveryEntity {
     name: 'provider_message_id',
     nullable: true,
   })
-  providerMessageId: string | null;
+  providerMessageId!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @ManyToOne(() => NotificationEntity, (n) => n.deliveries)
   @JoinColumn({ name: 'notification_id' })
-  notification: NotificationEntity;
+  notification!: NotificationEntity;
 
   @ManyToOne(() => NotificationRecipientEntity)
   @JoinColumn({ name: 'recipient_id' })
-  recipient: NotificationRecipientEntity;
+  recipient!: NotificationRecipientEntity;
 
   @OneToMany(
     () => NotificationAttemptEntity,
     (a) => a.delivery,
   )
-  attempts: NotificationAttemptEntity[];
+  attempts!: NotificationAttemptEntity[];
 }

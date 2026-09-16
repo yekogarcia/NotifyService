@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { TemplateController } from './interfaces/controllers/template.controller';
 import { NotificationTemplateEntity } from './domain/entities/template.entity';
 import { NotificationTemplateVersionEntity } from './domain/entities/template-version.entity';
@@ -9,7 +10,6 @@ import { GetTemplateUseCase } from './application/use-cases/get-template.use-cas
 import { HandlebarsRenderer } from './infrastructure/handlebars-renderer';
 import { ValidateVariablesUseCase } from './application/validate-variables';
 import { LocaleResolverUseCase } from './application/locale-resolver';
-import { TemplateRenderer } from './application/template-renderer';
 
 @Module({
   imports: [
@@ -26,8 +26,8 @@ import { TemplateRenderer } from './application/template-renderer';
     },
     {
       provide: CreateTemplateUseCase,
-      useFactory: (dataSource) => new CreateTemplateUseCase(dataSource),
-      inject: ['DataSource'],
+      useFactory: (dataSource: DataSource) => new CreateTemplateUseCase(dataSource),
+      inject: [DataSource],
     },
     UpdateTemplateVersionUseCase,
     GetTemplateUseCase,

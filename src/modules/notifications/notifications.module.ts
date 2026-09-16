@@ -14,7 +14,6 @@ import { CreateNotificationUseCase } from './application/use-cases/create-notifi
 import { IdempotencyCheckUseCase } from './application/use-cases/create-notification/idempotency-check';
 import { ValidateTemplateUseCase } from './application/use-cases/create-notification/validate-template';
 import { QueueModule } from '../../shared/infrastructure/queue/queue.module';
-import { NotificationRepository, DeliveryRepository, AttemptRepository } from './domain/repositories';
 
 @Module({
   imports: [
