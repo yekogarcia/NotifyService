@@ -5,33 +5,31 @@ export class InfobipAdapter {
   private readonly apiKey: string;
   private readonly from: string;
 
-  constructor(
-    config: Record<string, unknown>,
-    secretRef: string,
-  ) {
+  constructor(config: Record<string, unknown>, secretRef?: string) {
     this.baseUrl = (config.baseUrl as string) ?? 'https://api.infobip.com';
-    this.apiKey = process.env[secretRef] ?? '';
+    this.apiKey =
+      (config.apiKey as string | undefined) ??
+      (secretRef ? (process.env[secretRef] ?? '') : '');
     this.from = (config.from as string) ?? 'Notitify';
   }
 
   async sendSms(to: string, body: string): Promise<ProviderResult> {
     try {
-      const response = await fetch(
-        `${this.baseUrl}/sms/2/messages`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `IB ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: [{ from: this.from, to, text: body }],
-          }),
+      const response = await fetch(`${this.baseUrl}/sms/2/messages`, {
+        method: 'POST',
+        headers: {
+          Authorization: `IB ${this.apiKey}`,
+          'Content-Type': 'application/json',
         },
-      );
+        body: JSON.stringify({
+          messages: [{ from: this.from, to, text: body }],
+        }),
+      });
 
       if (response.ok) {
-        const data = await response.json() as { messages: { messageId: string }[] };
+        const data = (await response.json()) as {
+          messages: { messageId: string }[];
+        };
         return {
           success: true,
           providerMessageId: data.messages[0]?.messageId,

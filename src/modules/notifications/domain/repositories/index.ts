@@ -9,10 +9,7 @@ export interface NotificationRepository {
     idempotencyKey: string,
   ): Promise<NotificationEntity | null>;
   save(notification: NotificationEntity): Promise<NotificationEntity>;
-  updateStatus(
-    id: string,
-    status: string,
-  ): Promise<void>;
+  updateStatus(id: string, status: string): Promise<void>;
   findWithDeliveriesAndAttempts(id: string): Promise<NotificationEntity | null>;
 }
 
@@ -21,17 +18,15 @@ export interface DeliveryRepository {
   findByNotificationId(
     notificationId: string,
   ): Promise<NotificationDeliveryEntity[]>;
-  save(delivery: NotificationDeliveryEntity): Promise<NotificationDeliveryEntity>;
-  updateStatus(
-    id: string,
-    status: string,
-  ): Promise<void>;
+  save(
+    delivery: NotificationDeliveryEntity,
+  ): Promise<NotificationDeliveryEntity>;
+  updateStatus(id: string, status: string): Promise<void>;
   incrementAttemptCount(id: string): Promise<void>;
+  updateProviderId(id: string, providerId: string | null): Promise<void>;
 }
 
 export interface AttemptRepository {
   save(attempt: NotificationAttemptEntity): Promise<NotificationAttemptEntity>;
-  findByDeliveryId(
-    deliveryId: string,
-  ): Promise<NotificationAttemptEntity[]>;
+  findByDeliveryId(deliveryId: string): Promise<NotificationAttemptEntity[]>;
 }

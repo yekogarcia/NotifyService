@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AppLoggerService } from './infrastructure/logger/logger.service';
+import { SecretsService } from './infrastructure/security/secrets.service';
 
 @Module({
-  providers: [AppLoggerService],
-  exports: [AppLoggerService],
+  providers: [AppLoggerService, SecretsService],
+  exports: [AppLoggerService, SecretsService],
 })
 export class SharedModule {}

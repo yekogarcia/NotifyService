@@ -22,14 +22,14 @@ export class NotificationRepositoryImpl implements NotificationRepository {
     return this.repo.findOne({ where: { tenantId, idempotencyKey } });
   }
 
-  async save(
-    notification: NotificationEntity,
-  ): Promise<NotificationEntity> {
+  async save(notification: NotificationEntity): Promise<NotificationEntity> {
     return this.repo.save(notification);
   }
 
   async updateStatus(id: string, status: string): Promise<void> {
-    await this.repo.update(id, { status: status as NotificationEntity['status'] });
+    await this.repo.update(id, {
+      status: status as NotificationEntity['status'],
+    });
   }
 
   async findWithDeliveriesAndAttempts(

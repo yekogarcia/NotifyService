@@ -46,16 +46,22 @@ export class DeliveryDispatcher {
 
     await this.deliveryRepo.updateStatus(deliveryId, DeliveryStatus.PROCESSING);
 
+    const tenantId = delivery.notification?.tenantId;
+    if (!tenantId) {
+      throw new Error(`Notification not found for delivery: ${deliveryId}`);
+    }
+
     const channel = this.channelRegistry.getChannel(delivery.channel);
 
     let result;
     try {
-      result = await channel.send(
+      result = await channel.send({
         deliveryId,
-        renderedContent.to,
-        renderedContent.subject,
-        renderedContent.body,
-      );
+        tenantId,
+        to: renderedContent.to,
+        subject: renderedContent.subject,
+        body: renderedContent.body,
+      });
     } catch (error) {
       result = {
         success: false,
@@ -63,6 +69,10 @@ export class DeliveryDispatcher {
           error instanceof Error ? error.constructor.name : 'UnknownError',
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+
+    if (result.providerId) {
+      await this.deliveryRepo.updateProviderId(deliveryId, result.providerId);
     }
 
     const attemptNumber = delivery.attemptCount + 1;

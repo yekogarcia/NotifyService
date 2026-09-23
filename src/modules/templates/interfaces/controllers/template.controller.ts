@@ -6,6 +6,8 @@ import {
   Body,
   Param,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,13 +17,24 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsArray, ValidateNested, ArrayMinSize, IsEnum, IsNumber } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
+  IsEnum,
+  IsNumber,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateTemplateUseCase } from '../../application/use-cases/create-template.use-case';
 import { UpdateTemplateVersionUseCase } from '../../application/use-cases/update-template-version.use-case';
 import { GetTemplateUseCase } from '../../application/use-cases/get-template.use-case';
 import { ChannelType } from '../../../notifications/domain/enums';
+import { AuthenticatedRequest } from '../../../../shared/infrastructure/guards/auth.guard';
+import { AdminGuard } from '../../../auth/infrastructure/guards/admin.guard';
 
 class TemplateVersionDTO {
   @ApiProperty({ example: 1 })
@@ -42,7 +55,9 @@ class TemplateVersionDTO {
   @IsString()
   subject?: string;
 
-  @ApiProperty({ example: 'Hola {{userName}}, bienvenido a nuestra plataforma.' })
+  @ApiProperty({
+    example: 'Hola {{userName}}, bienvenido a nuestra plataforma.',
+  })
   @IsString()
   @IsNotEmpty()
   body!: string;
@@ -53,6 +68,11 @@ class TemplateVersionDTO {
 }
 
 class CreateTemplateDTO {
+  @ApiProperty({ example: 'app_abc123' })
+  @IsString()
+  @IsNotEmpty()
+  applicationId!: string;
+
   @ApiProperty({ example: 'welcome-email' })
   @IsString()
   @IsNotEmpty()
@@ -72,6 +92,7 @@ class CreateTemplateDTO {
 }
 
 @ApiTags('templates')
+@UseGuards(AdminGuard)
 @Controller('templates')
 export class TemplateController {
   constructor(
@@ -85,22 +106,35 @@ export class TemplateController {
   @ApiBody({ type: CreateTemplateDTO })
   @ApiResponse({ status: 201, description: 'Template created successfully' })
   @ApiResponse({ status: 400, description: 'Validation error' })
-  async create(@Body() input: CreateTemplateDTO) {
-    return this.createTemplate.execute(input as any);
+  async create(
+    @Req() req: AuthenticatedRequest,
+    @Body() input: CreateTemplateDTO,
+  ) {
+    const tenantId = req.user!.tenantId;
+    return this.createTemplate.execute({ ...input, tenantId });
   }
 
   @Get(':code')
   @ApiOperation({ summary: 'Get template with all versions' })
-  @ApiParam({ name: 'code', description: 'Template unique code', example: 'welcome-email' })
+  @ApiParam({
+    name: 'code',
+    description: 'Template unique code',
+    example: 'welcome-email',
+  })
   @ApiResponse({ status: 200, description: 'Template found' })
   @ApiResponse({ status: 404, description: 'Template not found' })
-  async findOne(@Param('code') code: string) {
-    return this.getTemplate.execute('default-tenant', code);
+  async findOne(@Req() req: AuthenticatedRequest, @Param('code') code: string) {
+    const tenantId = req.user!.tenantId;
+    return this.getTemplate.execute(tenantId, code);
   }
 
   @Patch(':code/versions/:version/activate')
   @ApiOperation({ summary: 'Activate a specific template version' })
-  @ApiParam({ name: 'code', description: 'Template unique code', example: 'welcome-email' })
+  @ApiParam({
+    name: 'code',
+    description: 'Template unique code',
+    example: 'welcome-email',
+  })
   @ApiParam({ name: 'version', description: 'Version number', example: 1 })
   @ApiQuery({ name: 'language', description: 'Language code', example: 'es' })
   @ApiQuery({ name: 'channel', description: 'Channel type', enum: ChannelType })
@@ -112,6 +146,11 @@ export class TemplateController {
     @Query('language') language: string,
     @Query('channel') channel: string,
   ) {
-    return this.updateVersion.activate(code, version, language, channel as ChannelType);
+    return this.updateVersion.activate(
+      code,
+      version,
+      language,
+      channel as ChannelType,
+    );
   }
 }

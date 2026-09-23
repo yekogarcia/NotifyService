@@ -10,7 +10,10 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ChannelType, RecipientType } from '../../../notifications/domain/enums';
+import {
+  ChannelType,
+  RecipientType,
+} from '../../../notifications/domain/enums';
 
 export class RecipientDTO {
   @ApiProperty({ enum: RecipientType })

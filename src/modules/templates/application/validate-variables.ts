@@ -5,7 +5,9 @@ import { TemplateRenderer } from '../application/template-renderer';
 export class ValidateVariablesUseCase {
   private readonly logger = new Logger(ValidateVariablesUseCase.name);
 
-  constructor(@Inject('TemplateRenderer') private readonly renderer: TemplateRenderer) {}
+  constructor(
+    @Inject('TemplateRenderer') private readonly renderer: TemplateRenderer,
+  ) {}
 
   execute(
     template: string,
@@ -21,9 +23,7 @@ export class ValidateVariablesUseCase {
     }
 
     if (missing.length > 0) {
-      this.logger.warn(
-        `Missing template variables: ${missing.join(', ')}`,
-      );
+      this.logger.warn(`Missing template variables: ${missing.join(', ')}`);
     }
 
     return { valid: missing.length === 0, missing };

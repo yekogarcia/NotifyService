@@ -3,11 +3,10 @@ import { ProviderResult } from '../../domain/email-provider.interface';
 export class SendGridAdapter {
   private readonly apiKey: string;
 
-  constructor(
-    _config: Record<string, unknown>,
-    secretRef: string,
-  ) {
-    this.apiKey = process.env[secretRef] ?? '';
+  constructor(config: Record<string, unknown>, secretRef?: string) {
+    this.apiKey =
+      (config.apiKey as string | undefined) ??
+      (secretRef ? (process.env[secretRef] ?? '') : '');
   }
 
   async sendEmail(

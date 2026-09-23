@@ -68,9 +68,6 @@ export class NotificationDeliveryEntity {
   @JoinColumn({ name: 'recipient_id' })
   recipient!: NotificationRecipientEntity;
 
-  @OneToMany(
-    () => NotificationAttemptEntity,
-    (a) => a.delivery,
-  )
+  @OneToMany(() => NotificationAttemptEntity, (a) => a.delivery)
   attempts!: NotificationAttemptEntity[];
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { QueueModule } from '../../shared/infrastructure/queue/queue.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ProvidersModule } from '../providers/providers.module';
 import { NotificationTemplateVersionEntity } from '../templates/domain/entities/template-version.entity';
 import { SesAdapter } from '../providers/infrastructure/adapters/ses.adapter';
 import { TwilioAdapter } from '../providers/infrastructure/adapters/twilio.adapter';
@@ -19,6 +20,7 @@ import { DeliveryWorker } from './infrastructure/workers/delivery.worker';
     TypeOrmModule.forFeature([NotificationTemplateVersionEntity]),
     QueueModule,
     NotificationsModule,
+    ProvidersModule,
   ],
   providers: [
     {

@@ -6,6 +6,8 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +16,8 @@ import { IsString, IsNotEmpty, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Platform } from '../../../notifications/domain/enums';
 import { DeviceEntity } from '../../domain/entities/device.entity';
+import { AuthenticatedRequest } from '../../../../shared/infrastructure/guards/auth.guard';
+import { AdminGuard } from '../../../auth/infrastructure/guards/admin.guard';
 
 class RegisterDeviceDTO {
   @ApiProperty()
@@ -32,6 +36,7 @@ class RegisterDeviceDTO {
 }
 
 @ApiTags('devices')
+@UseGuards(AdminGuard)
 @Controller('devices')
 export class DeviceController {
   constructor(
@@ -45,18 +50,23 @@ export class DeviceController {
   @ApiBody({ type: RegisterDeviceDTO })
   @ApiResponse({ status: 201, description: 'Device registered' })
   @ApiResponse({ status: 400, description: 'Validation error' })
-  async register(@Body() dto: RegisterDeviceDTO) {
-    const tenantId = 'default-tenant';
+  async register(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: RegisterDeviceDTO,
+  ) {
+    const tenantId = req.user!.tenantId;
+    const applicationId = req.user!.sub;
 
     await this.deviceRepo.upsert(
       {
         tenantId,
+        applicationId,
         userId: dto.userId,
         deviceToken: dto.deviceToken,
         platform: dto.platform,
         isActive: true,
       },
-      ['tenantId', 'deviceToken'],
+      ['tenantId', 'applicationId', 'deviceToken'],
     );
 
     return {
@@ -71,11 +81,15 @@ export class DeviceController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Unregister a device token' })
   @ApiResponse({ status: 200, description: 'Device unregistered' })
-  async unregister(@Param('token') token: string) {
-    const tenantId = 'default-tenant';
+  async unregister(
+    @Req() req: AuthenticatedRequest,
+    @Param('token') token: string,
+  ) {
+    const tenantId = req.user!.tenantId;
+    const applicationId = req.user!.sub;
 
     await this.deviceRepo.update(
-      { tenantId, deviceToken: token },
+      { tenantId, applicationId, deviceToken: token },
       { isActive: false },
     );
 

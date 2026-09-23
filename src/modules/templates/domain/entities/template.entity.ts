@@ -10,13 +10,16 @@ import {
 import { NotificationTemplateVersionEntity } from './template-version.entity';
 
 @Entity('notification_templates')
-@Unique('uq_template_tenant_code', ['tenantId', 'code'])
+@Unique('uq_template_tenant_app_code', ['tenantId', 'applicationId', 'code'])
 export class NotificationTemplateEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ type: 'uuid', name: 'tenant_id' })
   tenantId!: string;
+
+  @Column({ type: 'uuid', name: 'application_id' })
+  applicationId!: string;
 
   @Column({ type: 'varchar', length: 255 })
   code!: string;
@@ -30,9 +33,6 @@ export class NotificationTemplateEntity {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 
-  @OneToMany(
-    () => NotificationTemplateVersionEntity,
-    (v) => v.template,
-  )
+  @OneToMany(() => NotificationTemplateVersionEntity, (v) => v.template)
   versions!: NotificationTemplateVersionEntity[];
 }

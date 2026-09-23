@@ -13,9 +13,6 @@ export class IdempotencyCheckUseCase {
     tenantId: string,
     idempotencyKey: string,
   ): Promise<NotificationEntity | null> {
-    return this.notificationRepo.findByIdempotencyKey(
-      tenantId,
-      idempotencyKey,
-    );
+    return this.notificationRepo.findByIdempotencyKey(tenantId, idempotencyKey);
   }
 }

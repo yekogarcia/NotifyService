@@ -10,12 +10,16 @@ import {
 @Index('idx_notification_event_notification_id', ['notificationId'])
 @Index('idx_notification_event_correlation_id', ['correlationId'])
 @Index('idx_notification_event_tenant_created', ['tenantId', 'createdAt'])
+@Index('idx_events_application_id', ['applicationId'])
 export class NotificationEventEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ type: 'uuid', name: 'tenant_id' })
   tenantId!: string;
+
+  @Column({ type: 'uuid', name: 'application_id' })
+  applicationId!: string;
 
   @Column({ type: 'uuid', name: 'notification_id', nullable: true })
   notificationId!: string | null;

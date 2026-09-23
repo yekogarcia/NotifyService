@@ -8,6 +8,8 @@ import {
   HttpStatus,
   Query,
   Inject,
+  Req,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,6 +21,7 @@ import {
 import { CreateNotificationDTO } from '../../application/dto/create-notification.dto';
 import { CreateNotificationUseCase } from '../../application/use-cases/create-notification/create-notification.use-case';
 import { NotificationRepository } from '../../domain/repositories';
+import { AuthenticatedRequest } from '../../../../shared/infrastructure/guards/auth.guard';
 
 @ApiTags('notifications')
 @Controller('notifications')
@@ -36,9 +39,23 @@ export class NotificationController {
   @ApiResponse({ status: 202, description: 'Notification accepted and queued' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async create(@Body() dto: CreateNotificationDTO) {
-    const tenantId = 'db4acf04-d101-4d9b-8fe2-9513992b7c2a';
-    const result = await this.createNotification.execute(tenantId, dto);
+  async create(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateNotificationDTO,
+  ) {
+    const tenantId = req.user!.tenantId;
+    const applicationId =
+      req.user!.type === 'api' ? (req.user!.sub as string) : undefined;
+    if (!applicationId) {
+      throw new BadRequestException(
+        'applicationId is required (use a client_credentials token)',
+      );
+    }
+    const result = await this.createNotification.execute(
+      tenantId,
+      applicationId,
+      dto,
+    );
     return result;
   }
 
@@ -59,10 +76,7 @@ export class NotificationController {
   @ApiOperation({ summary: 'List notifications with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  async findAll(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-  ) {
+  async findAll(@Query('page') page?: number, @Query('limit') limit?: number) {
     return {
       message: 'List endpoint - implement with pagination',
       page: page ?? 1,

@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NestMiddleware,
-} from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import { FastifyRequest } from 'fastify';
 import { ServerResponse } from 'http';
 import { randomUUID } from 'crypto';

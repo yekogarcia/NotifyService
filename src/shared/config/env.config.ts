@@ -13,12 +13,10 @@ export const appConfig = registerAs('app', () => ({
   apiKey: process.env.API_KEY ?? 'dev-api-key',
   jwtSecret: process.env.JWT_SECRET ?? 'dev-jwt-secret',
   defaultLanguage: process.env.DEFAULT_LANGUAGE ?? 'es',
-  maxRetryAttempts: parseInt(
-    process.env.MAX_RETRY_ATTEMPTS ?? '3',
-    10,
-  ),
-  rateLimitPerMinute: parseInt(
-    process.env.RATE_LIMIT_PER_MINUTE ?? '100',
-    10,
-  ),
+  maxRetryAttempts: parseInt(process.env.MAX_RETRY_ATTEMPTS ?? '3', 10),
+  rateLimitPerMinute: parseInt(process.env.RATE_LIMIT_PER_MINUTE ?? '100', 10),
+}));
+
+export const secretsConfig = registerAs('secrets', () => ({
+  masterKey: process.env.SECRETS_MASTER_KEY,
 }));

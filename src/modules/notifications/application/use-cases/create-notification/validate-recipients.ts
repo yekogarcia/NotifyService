@@ -2,9 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { RecipientDTO } from '../../dto/create-notification.dto';
 import { RecipientType } from '../../../domain/enums';
 
-export function validateRecipients(
-  recipients: RecipientDTO[],
-): RecipientDTO[] {
+export function validateRecipients(recipients: RecipientDTO[]): RecipientDTO[] {
   for (const r of recipients) {
     if (
       r.recipientType === RecipientType.INTERNAL_USER ||

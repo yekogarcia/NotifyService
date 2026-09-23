@@ -10,18 +10,11 @@ export class AppLoggerService implements LoggerService {
   constructor() {
     this.logger = winston.createLogger({
       level: process.env.LOG_LEVEL ?? 'info',
-      format: combine(
-        errors({ stack: true }),
-        timestamp(),
-        json(),
-      ),
+      format: combine(errors({ stack: true }), timestamp(), json()),
       defaultMeta: { service: 'notitify-service' },
       transports: [
         new winston.transports.Console({
-          format: combine(
-            timestamp(),
-            json(),
-          ),
+          format: combine(timestamp(), json()),
         }),
       ],
     });

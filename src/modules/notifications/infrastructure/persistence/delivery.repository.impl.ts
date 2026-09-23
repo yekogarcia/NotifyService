@@ -12,7 +12,7 @@ export class DeliveryRepositoryImpl implements DeliveryRepository {
   ) {}
 
   async findById(id: string): Promise<NotificationDeliveryEntity | null> {
-    return this.repo.findOne({ where: { id } });
+    return this.repo.findOne({ where: { id }, relations: ['notification'] });
   }
 
   async findByNotificationId(
@@ -35,5 +35,9 @@ export class DeliveryRepositoryImpl implements DeliveryRepository {
 
   async incrementAttemptCount(id: string): Promise<void> {
     await this.repo.increment({ id }, 'attemptCount', 1);
+  }
+
+  async updateProviderId(id: string, providerId: string | null): Promise<void> {
+    await this.repo.update(id, { providerId });
   }
 }

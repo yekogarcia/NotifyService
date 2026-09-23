@@ -6,6 +6,7 @@ import { ChannelType } from '../../../notifications/domain/enums';
 
 export interface CreateTemplateInput {
   tenantId: string;
+  applicationId: string;
   code: string;
   description?: string;
   versions: {
@@ -20,14 +21,15 @@ export interface CreateTemplateInput {
 
 @Injectable()
 export class CreateTemplateUseCase {
-  constructor(
-    private readonly dataSource: DataSource,
-  ) {}
+  constructor(private readonly dataSource: DataSource) {}
 
-  async execute(input: CreateTemplateInput): Promise<NotificationTemplateEntity> {
+  async execute(
+    input: CreateTemplateInput,
+  ): Promise<NotificationTemplateEntity> {
     return this.dataSource.transaction(async (manager) => {
       const template = manager.create(NotificationTemplateEntity, {
         tenantId: input.tenantId,
+        applicationId: input.applicationId,
         code: input.code,
         description: input.description ?? null,
       });

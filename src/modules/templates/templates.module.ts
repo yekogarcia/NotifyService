@@ -26,7 +26,8 @@ import { LocaleResolverUseCase } from './application/locale-resolver';
     },
     {
       provide: CreateTemplateUseCase,
-      useFactory: (dataSource: DataSource) => new CreateTemplateUseCase(dataSource),
+      useFactory: (dataSource: DataSource) =>
+        new CreateTemplateUseCase(dataSource),
       inject: [DataSource],
     },
     UpdateTemplateVersionUseCase,
@@ -35,6 +36,10 @@ import { LocaleResolverUseCase } from './application/locale-resolver';
     LocaleResolverUseCase,
     HandlebarsRenderer,
   ],
-  exports: ['TemplateRenderer', LocaleResolverUseCase, ValidateVariablesUseCase],
+  exports: [
+    'TemplateRenderer',
+    LocaleResolverUseCase,
+    ValidateVariablesUseCase,
+  ],
 })
 export class TemplatesModule {}

@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Post,
-  Param,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Post, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Queue } from 'bullmq';
 import { NOTIFICATION_QUEUE } from '../../../../shared/infrastructure/queue/queue.module';

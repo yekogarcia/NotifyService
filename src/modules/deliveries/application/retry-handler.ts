@@ -38,10 +38,10 @@ export class RetryHandler {
       { delay },
     );
 
-    this.logger.warn(
-      `Scheduling retry for delivery ${deliveryId}`,
-      { attemptNumber: currentAttemptCount + 1, delayMs: delay },
-    );
+    this.logger.warn(`Scheduling retry for delivery ${deliveryId}`, {
+      attemptNumber: currentAttemptCount + 1,
+      delayMs: delay,
+    });
 
     return { willRetry: true, delayMs: delay };
   }

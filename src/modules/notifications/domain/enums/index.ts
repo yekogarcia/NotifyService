@@ -46,6 +46,7 @@ export enum ProviderType {
   FCM = 'FCM',
   SENDGRID = 'SENDGRID',
   INFOBIP = 'INFOBIP',
+  SMTP = 'SMTP',
 }
 
 export enum EventType {

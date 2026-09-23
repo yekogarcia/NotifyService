@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { CreateNotificationDTO } from '../../dto/create-notification.dto';
@@ -8,10 +8,7 @@ import { IdempotencyCheckUseCase } from './idempotency-check';
 import { NotificationEntity } from '../../../domain/entities/notification.entity';
 import { NotificationRecipientEntity } from '../../../domain/entities/notification-recipient.entity';
 import { NotificationDeliveryEntity } from '../../../domain/entities/notification-delivery.entity';
-import {
-  NotificationStatus,
-  DeliveryStatus,
-} from '../../../domain/enums';
+import { NotificationStatus, DeliveryStatus } from '../../../domain/enums';
 import { NOTIFICATION_QUEUE } from '../../../../../shared/infrastructure/queue/queue.module';
 import { Queue } from 'bullmq';
 import { RedisService } from '../../../../../shared/infrastructure/queue/redis.service';
@@ -40,8 +37,14 @@ export class CreateNotificationUseCase {
 
   async execute(
     tenantId: string,
+    applicationId: string,
     dto: CreateNotificationDTO,
   ): Promise<CreateNotificationResult> {
+    if (!applicationId) {
+      throw new BadRequestException(
+        'applicationId is required (use a client_credentials token)',
+      );
+    }
     const correlationId = randomUUID();
     const language = dto.language ?? 'es';
 
@@ -58,9 +61,7 @@ export class CreateNotificationUseCase {
       };
     }
 
-    const recipients = dto.recipient
-      ? [dto.recipient]
-      : dto.recipients ?? [];
+    const recipients = dto.recipient ? [dto.recipient] : (dto.recipients ?? []);
     validateRecipients(recipients);
 
     await this.validateTemplate.execute(
@@ -70,57 +71,56 @@ export class CreateNotificationUseCase {
       language,
     );
 
-    const notification = await this.dataSource.transaction(
-      async (manager) => {
-        const notification = manager.create(NotificationEntity, {
-          tenantId,
-          sourceSystem: dto.sourceSystem,
-          eventType: dto.eventType,
-          templateCode: dto.templateCode,
-          data: dto.data ?? {},
-          idempotencyKey: dto.idempotencyKey,
-          status: NotificationStatus.QUEUED,
-          correlationId,
-          eventId: null,
-        });
-        const saved = await manager.save(notification);
+    const notification = await this.dataSource.transaction(async (manager) => {
+      const notification = manager.create(NotificationEntity, {
+        tenantId,
+        applicationId,
+        sourceSystem: dto.sourceSystem,
+        eventType: dto.eventType,
+        templateCode: dto.templateCode,
+        data: dto.data ?? {},
+        idempotencyKey: dto.idempotencyKey,
+        status: NotificationStatus.QUEUED,
+        correlationId,
+        eventId: null,
+      });
+      const saved = await manager.save(notification);
 
-        const recipientEntities = recipients.map((r) =>
-          manager.create(NotificationRecipientEntity, {
-            notificationId: saved.id,
-            recipientType: r.recipientType,
-            userId: r.userId ?? null,
-            email: r.email ?? null,
-            phone: r.phone ?? null,
-          }),
-        );
-        const savedRecipients = await manager.save(
-          NotificationRecipientEntity,
-          recipientEntities,
-        );
+      const recipientEntities = recipients.map((r) =>
+        manager.create(NotificationRecipientEntity, {
+          notificationId: saved.id,
+          recipientType: r.recipientType,
+          userId: r.userId ?? null,
+          email: r.email ?? null,
+          phone: r.phone ?? null,
+        }),
+      );
+      const savedRecipients = await manager.save(
+        NotificationRecipientEntity,
+        recipientEntities,
+      );
 
-        const deliveries: NotificationDeliveryEntity[] = [];
-        for (const recipient of savedRecipients) {
-          for (const channel of dto.channels) {
-            deliveries.push(
-              manager.create(NotificationDeliveryEntity, {
-                notificationId: saved.id,
-                recipientId: recipient.id,
-                channel,
-                status: DeliveryStatus.QUEUED,
-                attemptCount: 0,
-                maxAttempts: 3,
-                providerId: null,
-                providerMessageId: null,
-              }),
-            );
-          }
+      const deliveries: NotificationDeliveryEntity[] = [];
+      for (const recipient of savedRecipients) {
+        for (const channel of dto.channels) {
+          deliveries.push(
+            manager.create(NotificationDeliveryEntity, {
+              notificationId: saved.id,
+              recipientId: recipient.id,
+              channel,
+              status: DeliveryStatus.QUEUED,
+              attemptCount: 0,
+              maxAttempts: 3,
+              providerId: null,
+              providerMessageId: null,
+            }),
+          );
         }
-        await manager.save(NotificationDeliveryEntity, deliveries);
+      }
+      await manager.save(NotificationDeliveryEntity, deliveries);
 
-        return saved;
-      },
-    );
+      return saved;
+    });
 
     await this.queue.add(
       'process-notification',

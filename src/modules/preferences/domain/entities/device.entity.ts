@@ -10,7 +10,11 @@ import {
 import { Platform } from '../../../notifications/domain/enums';
 
 @Entity('notification_devices')
-@Unique('uq_devices_tenant_token', ['tenantId', 'deviceToken'])
+@Unique('uq_devices_tenant_app_token', [
+  'tenantId',
+  'applicationId',
+  'deviceToken',
+])
 @Index('idx_devices_tenant_user', ['tenantId', 'userId'])
 export class DeviceEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -18,6 +22,9 @@ export class DeviceEntity {
 
   @Column({ type: 'uuid', name: 'tenant_id' })
   tenantId!: string;
+
+  @Column({ type: 'uuid', name: 'application_id' })
+  applicationId!: string;
 
   @Column({ type: 'varchar', length: 255, name: 'user_id' })
   userId!: string;

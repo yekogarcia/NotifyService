@@ -25,9 +25,12 @@
     "@nestjs/common": "^10.3.10",
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.3.10",
+    "@nestjs/jwt": "^12.0.2",
+    "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-fastify": "^10.3.10",
     "@nestjs/swagger": "^7.4.2",
     "@nestjs/typeorm": "^10.0.2",
+    "argon2": "^0.45.1",
     "bullmq": "^5.8.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
@@ -35,6 +38,9 @@
     "firebase-admin": "^12.4.2",
     "ioredis": "^5.4.1",
     "nest-winston": "^1.9.0",
+    "nodemailer": "^10.0.10",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
     "pg": "^8.12.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
@@ -49,6 +55,8 @@
     "@nestjs/testing": "^10.3.10",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.15",
+    "@types/nodemailer": "^8.0.2",
+    "@types/passport-jwt": "^4.0.1",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
@@ -82,6 +90,9 @@
     "testEnvironment": "node",
     "moduleNameMapper": {
       "^src/(.*)$": "<rootDir>/../src/$1"
-    }
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@nestjs/jwt|@nestjs/passport|@nestjs/common|@nestjs/core|@nestjs/platform-fastify|passport-jwt|argon2)/)"
+    ]
   }
 }

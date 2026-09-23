@@ -28,9 +28,9 @@ export class DeadLetterQueue {
       movedAt: new Date().toISOString(),
     });
 
-    this.logger.error(
-      `Delivery ${deliveryId} moved to Dead Letter Queue`,
-      { notificationId, reason },
-    );
+    this.logger.error(`Delivery ${deliveryId} moved to Dead Letter Queue`, {
+      notificationId,
+      reason,
+    });
   }
 }

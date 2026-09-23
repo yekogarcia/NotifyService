@@ -9,13 +9,21 @@ import {
 import { ChannelType } from '../../../notifications/domain/enums';
 
 @Entity('notification_preferences')
-@Unique('uq_preferences_tenant_user_channel', ['tenantId', 'userId', 'channel'])
+@Unique('uq_preferences_tenant_app_user_channel', [
+  'tenantId',
+  'applicationId',
+  'userId',
+  'channel',
+])
 export class PreferenceEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ type: 'uuid', name: 'tenant_id' })
   tenantId!: string;
+
+  @Column({ type: 'uuid', name: 'application_id' })
+  applicationId!: string;
 
   @Column({ type: 'varchar', length: 255, name: 'user_id' })
   userId!: string;

@@ -21,6 +21,9 @@ export class NotificationEntity {
   @Column({ type: 'uuid', name: 'tenant_id' })
   tenantId!: string;
 
+  @Column({ type: 'uuid', name: 'application_id' })
+  applicationId!: string;
+
   @Column({ type: 'varchar', length: 255, name: 'source_system' })
   sourceSystem!: string;
 
@@ -55,15 +58,9 @@ export class NotificationEntity {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 
-  @OneToMany(
-    () => NotificationRecipientEntity,
-    (r) => r.notification,
-  )
+  @OneToMany(() => NotificationRecipientEntity, (r) => r.notification)
   recipients!: NotificationRecipientEntity[];
 
-  @OneToMany(
-    () => NotificationDeliveryEntity,
-    (d) => d.notification,
-  )
+  @OneToMany(() => NotificationDeliveryEntity, (d) => d.notification)
   deliveries!: NotificationDeliveryEntity[];
 }
