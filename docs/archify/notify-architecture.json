@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "NotifyService — Arquitectura de componentes",
+    "quality_profile": "showcase",
+    "output": "notify-architecture.html",
+    "viewBox": [930, 500],
+    "views": [
+      { "id": "main-path", "label": "Ruta principal", "focus": ["emisores", "api", "queue", "worker", "dispatcher", "whatsapp"], "note": "Petición del emisor hasta el envío WhatsApp." },
+      { "id": "data-plane", "label": "Persistencia y cola", "focus": ["api", "postgres", "queue", "worker"], "note": "PostgreSQL como fuente de verdad; BullMQ asíncrono." },
+      { "id": "providers", "label": "Proveedores", "focus": ["dispatcher", "whatsapp", "others"], "note": "Proveedor activo por tenant y webhook de Meta." }
+    ]
+  },
+  "components": [
+    { "id": "emisores", "type": "external", "label": "Backend emisor", "sublabel": "JWT client_credentials", "pos": [8, 230], "size": [115, 60], "tag": "multi-tenant" },
+    { "id": "auth", "type": "security", "label": "AuthGuard + OAuth", "sublabel": "JWT · X-API-Key", "pos": [180, 70], "size": [115, 60] },
+    { "id": "api", "type": "backend", "label": "API NestJS", "sublabel": "Fastify :8080", "pos": [180, 230], "size": [115, 60] },
+    { "id": "postgres", "type": "database", "label": "PostgreSQL", "sublabel": "notif + templates", "pos": [180, 370], "size": [115, 60] },
+    { "id": "queue", "type": "messagebus", "label": "Redis / BullMQ", "sublabel": "notification-queue", "pos": [325, 230], "size": [115, 60], "tag": "attempts:3" },
+    { "id": "worker", "type": "backend", "label": "DeliveryWorker", "sublabel": "render + dirección", "pos": [470, 230], "size": [115, 60] },
+    { "id": "dispatcher", "type": "backend", "label": "Dispatcher", "sublabel": "Channel · Provider", "pos": [615, 230], "size": [125, 60] },
+    { "id": "whatsapp", "type": "external", "label": "WhatsApp Cloud", "sublabel": "text · template HSM", "pos": [770, 230], "size": [125, 60], "tag": "graph.facebook.com" },
+    { "id": "others", "type": "external", "label": "SES · Twilio · FCM", "sublabel": "email · sms · push", "pos": [615, 370], "size": [125, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "NotifyService · NestJS + Fastify + BullMQ", "wraps": ["api", "queue", "worker", "dispatcher", "postgres"] }
+  ],
+  "connections": [
+    { "id": "emit-to-api", "from": "emisores", "to": "api", "label": "POST /notifications", "variant": "emphasis", "labelAt": [150, 336] },
+    { "id": "guard", "from": "auth", "to": "api", "label": "verifica JWT / API Key", "variant": "security", "fromSide": "bottom", "toSide": "top", "labelAt": [237, 180] },
+    { "id": "persist", "from": "api", "to": "postgres", "label": "INSERT notif + deliveries", "fromSide": "bottom", "toSide": "top", "labelAt": [237, 336] },
+    { "id": "enqueue", "from": "api", "to": "queue", "label": "enqueue process-notification", "variant": "dashed", "labelAt": [400, 330] },
+    { "id": "deliver-job", "from": "queue", "to": "worker", "label": "deliver job", "variant": "emphasis", "labelAt": [455, 216] },
+    { "id": "dispatch", "from": "worker", "to": "dispatcher", "label": "dispatch(rendered)", "labelAt": [600, 330] },
+    { "id": "send-wa", "from": "dispatcher", "to": "whatsapp", "label": "POST /messages · wamid", "variant": "emphasis", "labelAt": [755, 216] },
+    { "id": "send-others", "from": "dispatcher", "to": "others", "label": "sendEmail · sendSms · sendPush", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [677, 336] },
+    { "id": "webhook", "from": "whatsapp", "to": "api", "label": "webhook status → DELIVERED", "variant": "dashed", "fromSide": "bottom", "toSide": "right", "via": [[832.5, 290], [832.5, 460], [310, 460], [310, 260]], "labelAt": [560, 460] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Ruta principal", "items": ["POST 202 → encola", "Worker render + envío", "wamid persistido"] },
+    { "dot": "emerald", "title": "Datos", "items": ["PostgreSQL multi-tenant", "BullMQ reintenta ×3", "language (migración 0023)"] },
+    { "dot": "rose", "title": "Seguridad", "items": ["JWT / X-API-Key", "secretos AES-256-GCM", "webhook Meta firmado"] }
+  ]
+}

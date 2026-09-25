@@ -3,12 +3,17 @@ import { DataSource } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { CreateNotificationDTO } from '../../dto/create-notification.dto';
 import { validateRecipients } from './validate-recipients';
+import { validateWhatsAppRecipients } from './validate-whatsapp-recipients';
 import { ValidateTemplateUseCase } from './validate-template';
 import { IdempotencyCheckUseCase } from './idempotency-check';
 import { NotificationEntity } from '../../../domain/entities/notification.entity';
 import { NotificationRecipientEntity } from '../../../domain/entities/notification-recipient.entity';
 import { NotificationDeliveryEntity } from '../../../domain/entities/notification-delivery.entity';
-import { NotificationStatus, DeliveryStatus } from '../../../domain/enums';
+import {
+  NotificationStatus,
+  DeliveryStatus,
+  ChannelType,
+} from '../../../domain/enums';
 import { NOTIFICATION_QUEUE } from '../../../../../shared/infrastructure/queue/queue.module';
 import { Queue } from 'bullmq';
 import { RedisService } from '../../../../../shared/infrastructure/queue/redis.service';
@@ -63,6 +68,9 @@ export class CreateNotificationUseCase {
 
     const recipients = dto.recipient ? [dto.recipient] : (dto.recipients ?? []);
     validateRecipients(recipients);
+    if (dto.channels.includes(ChannelType.WHATSAPP)) {
+      validateWhatsAppRecipients(recipients);
+    }
 
     await this.validateTemplate.execute(
       tenantId,
@@ -78,6 +86,7 @@ export class CreateNotificationUseCase {
         sourceSystem: dto.sourceSystem,
         eventType: dto.eventType,
         templateCode: dto.templateCode,
+        language,
         data: dto.data ?? {},
         idempotencyKey: dto.idempotencyKey,
         status: NotificationStatus.QUEUED,

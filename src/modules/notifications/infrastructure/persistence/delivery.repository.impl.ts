@@ -21,6 +21,15 @@ export class DeliveryRepositoryImpl implements DeliveryRepository {
     return this.repo.find({ where: { notificationId } });
   }
 
+  async findByProviderMessageId(
+    providerMessageId: string,
+  ): Promise<NotificationDeliveryEntity | null> {
+    return this.repo.findOne({
+      where: { providerMessageId },
+      relations: ['notification'],
+    });
+  }
+
   async save(
     delivery: NotificationDeliveryEntity,
   ): Promise<NotificationDeliveryEntity> {
@@ -39,5 +48,12 @@ export class DeliveryRepositoryImpl implements DeliveryRepository {
 
   async updateProviderId(id: string, providerId: string | null): Promise<void> {
     await this.repo.update(id, { providerId });
+  }
+
+  async updateProviderMessageId(
+    id: string,
+    providerMessageId: string,
+  ): Promise<void> {
+    await this.repo.update(id, { providerMessageId });
   }
 }

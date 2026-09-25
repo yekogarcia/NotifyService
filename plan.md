@@ -15,6 +15,51 @@ _(sin planes activos — ver Historial)_
 
 ## Historial
 
+### [COMPLETADO] WhatsApp con Meta WhatsApp Cloud API (2026-09-23)
+
+**Diseño final (confirmado por el usuario):**
+- API: **Meta WhatsApp Cloud API** (fetch crudo a `graph.facebook.com`, sin SDK)
+- Mensajes: **texto libre + Template HSM** — convención: en versiones de template con `channel=WHATSAPP`, `subject` = nombre de plantilla Meta aprobada (→ `type: "template"`), `subject: null` → texto libre (`type: "text"`)
+- **Webhook de estados incluido en esta fase** (`GET/POST /api/v1/webhooks/whatsapp`)
+- Migración `0023`: columna `notifications.language` (NOT NULL default `es`) — el worker filtra la versión activa por `(code, channel, language)`
+- Validación: recipients WHATSAPP exigen `phone` E.164 (`^\+[1-9]\d{7,14}$`)
+- Params HSM: extraídos en orden de `{{vars}}` del `body` local y renderizados con `notification.data` (el worker ahora renderiza — antes pasaba el template crudo)
+- `delivery.provider_message_id` ahora **se escribe** en el dispatcher (antes solo en attempts) → correlación webhook por wamid
+- State machine: `SENT → FAILED` habilitado (fallo reportado por webhook después del envío)
+
+**Tareas:**
+- [x] `ProviderType.WHATSAPP_CLOUD` + `WhatsAppProvider` interface (`sendText`/`sendTemplate`) + `WhatsAppCloudAdapter` (fetch, apiVersion default `v21.0`)
+- [x] Case en `ProviderRegistry` → adapter con `accessToken` = `secret` descifrado; `phoneNumberId`/`apiVersion` en `config`
+- [x] `WhatsappChannel` (subject → HSM, null → texto) + registro en `ChannelRegistry` + fallback env `'WhatsAppProvider'` en `DeliveriesModule`
+- [x] `SendContext`/`RenderedContent` con `language?`/`templateParams?`
+- [x] `DeliveryWorker`: render con `TemplateRenderer`, params HSM, filtro por `notification.language`, dirección WHATSAPP = `recipient.phone`
+- [x] Migración 0023 + `NotificationEntity.language` + persistencia en `CreateNotificationUseCase`
+- [x] `validateWhatsAppRecipients` (E.164) cuando el canal incluye WHATSAPP
+- [x] `DeliveryRepository.updateProviderMessageId` + `findByProviderMessageId` + dispatcher
+- [x] Webhook: `WhatsappWebhookController` (`@Public`, handshake plain-text, firma `X-Hub-Signature-256` opcional con `WHATSAPP_APP_SECRET`, `rawBody: true` en main) + `HandleWhatsappStatusUseCase` (mapa sent/delivered/failed, `read` = no-op, valida transiciones)
+- [x] `.env`: `WHATSAPP_VERIFY_TOKEN` (+ vars fallback comentadas)
+- [x] Tests: adapter (6), channel (5), webhook status (13), phone validation (4), `SENT→FAILED` — **84 tests OK**
+- [x] `build`, `lint`, `opencode.md` actualizados
+- [ ] **Pendiente E2E real** (requiere credenciales Meta: WABA + número + token + plantillas aprobadas): provider → mapeo WHATSAPP → template HSM activo → notificación → delivery `SENT` con wamid → curl simulando webhook `delivered` → `DELIVERED`
+
+**Payload canónico:**
+```json
+POST /api/v1/providers
+{
+  "name": "Meta WhatsApp Cloud",
+  "providerType": "WHATSAPP_CLOUD",
+  "config": { "phoneNumberId": "108999887766", "apiVersion": "v21.0" },
+  "secret": "<permanent access token>"
+}
+```
+Luego `POST /api/v1/providers/{id}/channels` con `{ "channel": "WHATSAPP" }`.
+
+Template HSM (`POST /api/v1/templates`): versión `channel: "WHATSAPP"`, `language` = código Meta exacto, `subject: "order_created_es"`, `body: "Hola {{name}}, tu orden {{orderId}} está lista."`. Texto libre: `subject: null`.
+
+Webhook Meta: `https://<host>/api/v1/webhooks/whatsapp` (campos `messages`), verify token = `WHATSAPP_VERIFY_TOKEN`.
+
+---
+
 ### [COMPLETADO] Correo vía SES-SMTP con secretos cifrados (2026-09-22)
 
 **Diseño final (confirmado por el usuario):**

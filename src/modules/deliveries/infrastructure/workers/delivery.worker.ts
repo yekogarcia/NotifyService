@@ -8,6 +8,7 @@ import { NotificationRepository } from '../../../notifications/domain/repositori
 import { NotificationTemplateVersionEntity } from '../../../templates/domain/entities/template-version.entity';
 import { NotificationRecipientEntity } from '../../../notifications/domain/entities/notification-recipient.entity';
 import { ChannelType } from '../../../notifications/domain/enums';
+import { TemplateRenderer } from '../../../templates/application/template-renderer';
 import {
   DeliveryDispatcher,
   RenderedContent,
@@ -30,6 +31,8 @@ export class DeliveryWorker implements OnModuleDestroy {
     private readonly notificationRepo: NotificationRepository,
     @InjectRepository(NotificationTemplateVersionEntity)
     private readonly templateVersionRepo: Repository<NotificationTemplateVersionEntity>,
+    @Inject('TemplateRenderer')
+    private readonly renderer: TemplateRenderer,
     redisService: RedisService,
   ) {
     this.worker = new Worker(
@@ -64,6 +67,9 @@ export class DeliveryWorker implements OnModuleDestroy {
       throw new Error(`Notification not found: ${notificationId}`);
     }
 
+    const data = notification.data ?? {};
+    const language = notification.language ?? 'es';
+
     for (const delivery of notification.deliveries) {
       const recipient = notification.recipients.find(
         (r: NotificationRecipientEntity) => r.id === delivery.recipientId,
@@ -90,6 +96,7 @@ export class DeliveryWorker implements OnModuleDestroy {
             code: notification.templateCode,
           },
           channel: delivery.channel,
+          language,
           isActive: true,
         },
         relations: ['template'],
@@ -97,15 +104,24 @@ export class DeliveryWorker implements OnModuleDestroy {
 
       if (!templateVersion) {
         this.logger.warn(
-          `No active template version for code ${notification.templateCode}, channel ${delivery.channel}`,
+          `No active template version for code ${notification.templateCode}, channel ${delivery.channel}, language ${language}`,
         );
         continue;
       }
 
+      const body = this.renderer.render(templateVersion.body, data);
+      const templateParams = templateVersion.body
+        ? this.renderer
+            .extractVariables(templateVersion.body)
+            .map((name) => this.renderer.render(`{{${name}}}`, data))
+        : [];
+
       const content: RenderedContent = {
         to,
         subject: templateVersion.subject,
-        body: templateVersion.body,
+        body,
+        language: templateVersion.language,
+        templateParams,
       };
 
       await this.dispatcher.dispatch(delivery.id, content);
@@ -120,6 +136,8 @@ export class DeliveryWorker implements OnModuleDestroy {
       case ChannelType.EMAIL:
         return recipient.email;
       case ChannelType.SMS:
+        return recipient.phone;
+      case ChannelType.WHATSAPP:
         return recipient.phone;
       case ChannelType.PUSH:
         return recipient.userId;

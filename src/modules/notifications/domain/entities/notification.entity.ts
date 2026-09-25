@@ -33,6 +33,9 @@ export class NotificationEntity {
   @Column({ type: 'varchar', length: 255, name: 'template_code' })
   templateCode!: string;
 
+  @Column({ type: 'varchar', length: 10, default: 'es' })
+  language!: string;
+
   @Column({ type: 'jsonb', default: '{}' })
   data!: Record<string, unknown>;
 

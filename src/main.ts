@@ -11,7 +11,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ trustProxy: true }),
-    { bufferLogs: true },
+    { bufferLogs: true, rawBody: true },
   );
 
   app.setGlobalPrefix('api/v1');

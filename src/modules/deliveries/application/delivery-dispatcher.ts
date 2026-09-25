@@ -15,6 +15,8 @@ export interface RenderedContent {
   to: string;
   subject: string | null;
   body: string;
+  language?: string;
+  templateParams?: string[];
 }
 
 @Injectable()
@@ -61,6 +63,8 @@ export class DeliveryDispatcher {
         to: renderedContent.to,
         subject: renderedContent.subject,
         body: renderedContent.body,
+        language: renderedContent.language,
+        templateParams: renderedContent.templateParams,
       });
     } catch (error) {
       result = {
@@ -73,6 +77,12 @@ export class DeliveryDispatcher {
 
     if (result.providerId) {
       await this.deliveryRepo.updateProviderId(deliveryId, result.providerId);
+    }
+    if (result.providerMessageId) {
+      await this.deliveryRepo.updateProviderMessageId(
+        deliveryId,
+        result.providerMessageId,
+      );
     }
 
     const attemptNumber = delivery.attemptCount + 1;

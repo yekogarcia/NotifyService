@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "NotifyService — Envío WhatsApp y webhook de estados",
+    "quality_profile": "showcase",
+    "output": "notify-whatsapp-sequence.html",
+    "viewBox": [960, 560],
+    "views": [
+      { "id": "accept", "label": "Aceptación síncrona", "focus": ["emisor", "api", "postgres", "queue"], "note": "Persiste y responde 202 sin esperar el envío." },
+      { "id": "send", "label": "Envío asíncrono", "focus": ["queue", "worker", "meta"], "note": "Worker renderiza plantilla y llama a Meta." },
+      { "id": "status", "label": "Estados webhook", "focus": ["meta", "api", "postgres"], "note": "delivered/failed correlacionados por wamid." }
+    ]
+  },
+  "participants": [
+    { "id": "emisor", "type": "external", "label": "Emisor", "sublabel": "JWT" },
+    { "id": "api", "type": "backend", "label": "API NestJS", "sublabel": "HTTP" },
+    { "id": "postgres", "type": "database", "label": "PostgreSQL", "sublabel": "BD" },
+    { "id": "queue", "type": "messagebus", "label": "BullMQ", "sublabel": "cola" },
+    { "id": "worker", "type": "backend", "label": "Worker", "sublabel": "render" },
+    { "id": "meta", "type": "cloud", "label": "Meta API", "sublabel": "WhatsApp" }
+  ],
+  "segments": [
+    { "from": 120, "to": 250, "label": "Aceptación síncrona" },
+    { "from": 265, "to": 385, "label": "Procesamiento asíncrono" },
+    { "from": 400, "to": 470, "label": "Correlación de estados" }
+  ],
+  "messages": [
+    { "from": "emisor", "to": "api", "y": 160, "label": "POST /api/v1/notifications", "variant": "emphasis" },
+    { "from": "api", "to": "postgres", "y": 191, "label": "INSERT notifications + deliveries" },
+    { "from": "api", "to": "queue", "y": 222, "label": "add process-notification", "variant": "dashed" },
+    { "from": "api", "to": "emisor", "y": 253, "label": "202 + notificationId", "variant": "return" },
+    { "from": "queue", "to": "worker", "y": 295, "label": "deliver job", "variant": "emphasis" },
+    { "from": "worker", "to": "postgres", "y": 326, "label": "template (language) + data" },
+    { "from": "worker", "to": "meta", "y": 357, "label": "POST /messages · text|template", "variant": "emphasis" },
+    { "from": "meta", "to": "worker", "y": 388, "label": "200 + wamid", "variant": "return" },
+    { "from": "worker", "to": "postgres", "y": 419, "label": "SENT + provider_message_id" },
+    { "from": "meta", "to": "api", "y": 448, "label": "POST /webhooks/whatsapp · delivered", "variant": "dashed" },
+    { "from": "api", "to": "postgres", "y": 477, "label": "DELIVERED (lookup wamid)" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Resumen", "items": ["202 → worker → Meta → webhook"] }
+  ]
+}

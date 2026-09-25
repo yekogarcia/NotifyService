@@ -47,6 +47,7 @@ export enum ProviderType {
   SENDGRID = 'SENDGRID',
   INFOBIP = 'INFOBIP',
   SMTP = 'SMTP',
+  WHATSAPP_CLOUD = 'WHATSAPP_CLOUD',
 }
 
 export enum EventType {

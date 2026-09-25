@@ -3,17 +3,26 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { QueueModule } from '../../shared/infrastructure/queue/queue.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ProvidersModule } from '../providers/providers.module';
+import { TemplatesModule } from '../templates/templates.module';
 import { NotificationTemplateVersionEntity } from '../templates/domain/entities/template-version.entity';
 import { SesAdapter } from '../providers/infrastructure/adapters/ses.adapter';
 import { TwilioAdapter } from '../providers/infrastructure/adapters/twilio.adapter';
 import { FcmAdapter } from '../providers/infrastructure/adapters/fcm.adapter';
+import {
+  WhatsAppCloudAdapter,
+  WhatsAppCloudAdapterConfig,
+} from '../providers/infrastructure/adapters/whatsapp-cloud.adapter';
 import { PushProvider } from '../providers/domain/push-provider.interface';
+import { WhatsAppProvider } from '../providers/domain/whatsapp-provider.interface';
 import { EmailChannel } from './infrastructure/channels/email.channel';
 import { SmsChannel } from './infrastructure/channels/sms.channel';
 import { PushChannel } from './infrastructure/channels/push.channel';
+import { WhatsappChannel } from './infrastructure/channels/whatsapp.channel';
 import { ChannelRegistry } from './application/channel-registry';
 import { DeliveryDispatcher } from './application/delivery-dispatcher';
 import { DeliveryWorker } from './infrastructure/workers/delivery.worker';
+import { WhatsappWebhookController } from './interfaces/controllers/whatsapp-webhook.controller';
+import { HandleWhatsappStatusUseCase } from './application/handle-whatsapp-status.use-case';
 
 @Module({
   imports: [
@@ -21,7 +30,9 @@ import { DeliveryWorker } from './infrastructure/workers/delivery.worker';
     QueueModule,
     NotificationsModule,
     ProvidersModule,
+    TemplatesModule,
   ],
+  controllers: [WhatsappWebhookController],
   providers: [
     {
       provide: 'EmailProvider',
@@ -59,12 +70,42 @@ import { DeliveryWorker } from './infrastructure/workers/delivery.worker';
         });
       },
     },
+    {
+      provide: 'WhatsAppProvider',
+      useFactory: (): WhatsAppProvider => {
+        const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+        const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+        if (!phoneNumberId || !accessToken) {
+          return {
+            sendText: async () => ({
+              success: false,
+              errorType: 'ConfigurationError',
+              errorMessage:
+                'WHATSAPP_PHONE_NUMBER_ID/WHATSAPP_ACCESS_TOKEN is not configured',
+            }),
+            sendTemplate: async () => ({
+              success: false,
+              errorType: 'ConfigurationError',
+              errorMessage:
+                'WHATSAPP_PHONE_NUMBER_ID/WHATSAPP_ACCESS_TOKEN is not configured',
+            }),
+          };
+        }
+        return new WhatsAppCloudAdapter({
+          phoneNumberId,
+          accessToken,
+          apiVersion: process.env.WHATSAPP_API_VERSION,
+        } satisfies WhatsAppCloudAdapterConfig);
+      },
+    },
     EmailChannel,
     SmsChannel,
     PushChannel,
+    WhatsappChannel,
     ChannelRegistry,
     DeliveryDispatcher,
     DeliveryWorker,
+    HandleWhatsappStatusUseCase,
   ],
   exports: [DeliveryDispatcher],
 })

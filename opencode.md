@@ -1,6 +1,6 @@
 # NotifyService - Context Document
 
-> Last updated: 2026-09-22
+> Last updated: 2026-09-23
 > This file captures the full context of the NotifyService project. Update it whenever significant changes are made.
 > 
 > **opencode.md** is the context file for OpenCode sessions. Keep it updated with architecture decisions, auth flows, and endpoint changes.
@@ -214,7 +214,9 @@ All routes prefixed with `/api/v1`.
 | PUT | `/providers/:id` | Bearer | Update (re-encrypts if `secret` provided; responses mask secretRef) |
 | POST | `/providers/:id/channels` | Bearer | Map to channel (persists, 1 active per channel per tenant) |
 
-**SES email sending:** create provider with `providerType: "SES"` and `config: { transport: "smtp", host, port, secure, starttls, username, fromAddress }`; the CSV password goes in `secret` (AES-256-GCM with `SECRETS_MASTER_KEY` → `enc:v1:` in `secret_ref` — no per-provider `.env` vars, DB alone is useless without the master key). `fromAddress` must be an identity verified in SES (e.g. `contacto@semic.com.co`). The registry builds a `SmtpAdapter` (nodemailer) when `transport === "smtp"`, otherwise falls back to the AWS SDK adapter. Delivery channels resolve the provider per `(tenant, channel)` via `ProviderRegistry` (Redis cache TTL 300s, invalidated on save), falling back to legacy env vars when no mapping exists. WhatsApp will follow the same pattern later (new providerType + registry case).
+**SES email sending:** create provider with `providerType: "SES"` and `config: { transport: "smtp", host, port, secure, starttls, username, fromAddress }`; the CSV password goes in `secret` (AES-256-GCM with `SECRETS_MASTER_KEY` → `enc:v1:` in `secret_ref` — no per-provider `.env` vars, DB alone is useless without the master key). `fromAddress` must be an identity verified in SES (e.g. `contacto@semic.com.co`). The registry builds a `SmtpAdapter` (nodemailer) when `transport === "smtp"`, otherwise falls back to the AWS SDK adapter. Delivery channels resolve the provider per `(tenant, channel)` via `ProviderRegistry` (Redis cache TTL 300s, invalidated on save), falling back to legacy env vars when no mapping exists.
+
+**WhatsApp Cloud API sending (Meta):** create provider with `providerType: "WHATSAPP_CLOUD"` and `config: { phoneNumberId, apiVersion? }`; the permanent access token goes in `secret` (same AES-256-GCM encryption). Then `POST /providers/:id/channels` with `{ "channel": "WHATSAPP" }`. The registry builds a `WhatsAppCloudAdapter` (raw fetch to `graph.facebook.com`). Recipients need `phone` in E.164 (`+573001234567`). **Template convention for `channel=WHATSAPP` versions:** `subject` = Meta HSM template name (e.g. `order_created_es`) → sends `type: "template"` with ordered params extracted/rendered from `body` `{{vars}}` + `notification.data`; `subject: null` → free text (`type: "text"`, session window ≤24h). `language` must match the Meta template language code exactly. Status webhooks (`sent`/`delivered`/`failed`) arrive at `GET/POST /webhooks/whatsapp` (verify token `WHATSAPP_VERIFY_TOKEN`, optional HMAC `WHATSAPP_APP_SECRET`) and update the delivery by `provider_message_id` (wamid).
 
 ### Preferences (Protected)
 | Method | Route | Auth | Description |
@@ -233,6 +235,12 @@ All routes prefixed with `/api/v1`.
 |--------|-------|------|-------------|
 | POST | `/deliveries/:id/retry` | Bearer | Retry failed delivery |
 
+### Webhooks (Public)
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| GET | `/webhooks/whatsapp` | Public (verify token) | Meta handshake: echoes `hub.challenge` when `hub.verify_token` matches `WHATSAPP_VERIFY_TOKEN` |
+| POST | `/webhooks/whatsapp` | Public (+ optional `X-Hub-Signature-256`) | WhatsApp status updates → delivery `SENT`/`DELIVERED`/`FAILED` by wamid |
+
 ### Health
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
@@ -249,7 +257,7 @@ DeliveryStatus:    CREATED | QUEUED | PROCESSING | SENT | DELIVERED | FAILED | R
 ChannelType:       EMAIL | SMS | PUSH | WHATSAPP | WEBHOOK | SLACK | TEAMS
 RecipientType:     INTERNAL_USER | EXTERNAL_USER | EMAIL | PHONE
 AttemptResult:     SUCCESS | TRANSIENT_ERROR | PERMANENT_ERROR
-ProviderType:      SES | TWILIO | FCM | SENDGRID | INFOBIP | SMTP
+ProviderType:      SES | TWILIO | FCM | SENDGRID | INFOBIP | SMTP | WHATSAPP_CLOUD
 EventType:         NOTIFICATION_CREATED | DELIVERY_QUEUED | ATTEMPT_STARTED | ATTEMPT_SUCCESS |
                    ATTEMPT_FAILED | DELIVERY_SENT | DELIVERY_DELIVERED | DELIVERY_FAILED | DLQ_ENTERED
 Platform:          IOS | ANDROID | WEB
@@ -268,7 +276,7 @@ CREATED → QUEUED → PROCESSING → SENT → DELIVERED
 ### Delivery Status
 ```
 CREATED → QUEUED → PROCESSING → SENT → DELIVERED
-                   ↗ RETRYING ↘
+                   ↗ RETRYING ↘  ↘ FAILED (webhook failure after send)
                                 ↘ FAILED (→ Dead Letter Queue)
 ```
 
@@ -287,7 +295,13 @@ MAX_RETRY_ATTEMPTS='3'
 RATE_LIMIT_PER_MINUTE='100'
 # AES-256-GCM master key for provider secrets at rest (openssl rand -hex 32)
 SECRETS_MASTER_KEY='<64-char-hex>'
-# Legacy provider configs (optional; prefer DB provider config)
+# WhatsApp Cloud API
+WHATSAPP_VERIFY_TOKEN='dev-whatsapp-verify-token'   # webhook handshake token
+WHATSAPP_APP_SECRET=                                # optional: enables X-Hub-Signature-256 verification
+# Legacy fallbacks (optional; prefer DB provider config)
+WHATSAPP_ACCESS_TOKEN=                              # fallback token when no provider mapping
+WHATSAPP_PHONE_NUMBER_ID=                           # fallback phoneNumberId
+WHATSAPP_API_VERSION=v21.0
 SES_REGION, SES_FROM_ADDRESS, SES_SECRET_REF
 TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
 FCM_SERVICE_ACCOUNT_KEY
@@ -317,10 +331,11 @@ npm run test           # Run Jest tests
 6. **Secret management:** `client_secret` hashed with argon2id; provider secrets encrypted with AES-256-GCM (`SECRETS_MASTER_KEY` in .env) and stored as `enc:v1:<iv>:<tag>:<data>` in `notification_providers.secret_ref`; non-sensitive refs (ARN, env var name) stored plain
 7. **Queue-based delivery:** BullMQ with Redis for async notification processing, retry with exponential backoff, dead letter queue for failed deliveries
 8. **Dynamic provider resolution:** at send time each channel asks `ProviderRegistry` for the active provider of `(tenantId, channel)` (Redis cache `provider:{tenantId}:{channel}`, TTL 300s, invalidated on config save); no mapping → legacy env-based adapter fallback. `delivery.provider_id` records which provider was used
+9. **WhatsApp (Meta Cloud API):** `WHATSAPP_CLOUD` provider + `WhatsappChannel`; HSM vs free-text selected by template version `subject` (Meta template name vs null); params rendered from `body` `{{vars}}` with `notification.data`; status correlation by wamid in `notification_deliveries.provider_message_id`; `notifications.language` (migración 0023) selects the active template version per language in the worker
 
 ---
 
-## Migrations (19 total)
+## Migrations (23 total)
 
 | # | Table | Purpose |
 |---|-------|---------|
@@ -344,6 +359,7 @@ npm run test           # Run Jest tests
 | 0019 | notification_events | Add application_id FK |
 | 0021 | oauth_tokens | Create oauth_tokens (refresh tokens) |
 | 0022 | oauth_tokens | Make application_id nullable (password grant) |
+| 0023 | notifications | Add language column (NOT NULL, default 'es') |
 
 ---
 

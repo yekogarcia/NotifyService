@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "NotifyService — Ciclo de vida de un delivery",
+    "quality_profile": "showcase",
+    "output": "notify-delivery-lifecycle.html",
+    "viewBox": [1040, 630],
+    "views": [
+      { "id": "happy-path", "label": "Ruta feliz", "focus": ["created", "queued", "processing", "sent", "delivered"], "note": "Del encolado hasta delivered." },
+      { "id": "retry-loop", "label": "Reintentos", "focus": ["processing", "retrying", "failed"], "note": "Backoff exponencial hasta ×3." },
+      { "id": "webhook-failure", "label": "Fallo webhook", "focus": ["sent", "failed"], "note": "SENT → FAILED por reporte de Meta." }
+    ]
+  },
+  "lanes": [
+    { "id": "main", "label": "Ciclo principal" },
+    { "id": "recovery", "label": "Reintento BullMQ" },
+    { "id": "terminal", "label": "Terminales" }
+  ],
+  "states": [
+    { "id": "created", "type": "start", "label": "CREATED", "sublabel": "fila en BD", "lane": "main", "col": 0, "step": "01" },
+    { "id": "queued", "type": "active", "label": "QUEUED", "sublabel": "job BullMQ", "lane": "main", "col": 1, "step": "02" },
+    { "id": "processing", "type": "active", "label": "PROCESSING", "sublabel": "worker", "lane": "main", "col": 2, "step": "03" },
+    { "id": "sent", "type": "waiting", "label": "SENT", "sublabel": "wamid", "lane": "main", "col": 3, "step": "04" },
+    { "id": "delivered", "type": "success", "label": "DELIVERED", "sublabel": "confirmado", "lane": "main", "col": 4, "step": "05" },
+    { "id": "retrying", "type": "failure", "label": "RETRYING", "sublabel": "backoff ×3", "lane": "recovery", "col": 0 },
+    { "id": "failed", "type": "failure", "label": "FAILED", "sublabel": "terminal", "lane": "terminal", "col": 1 }
+  ],
+  "transitions": [
+    { "from": "processing", "to": "retrying", "variant": "dashed", "route": "straight", "fromSide": "bottom", "toSide": "top", "label": "error transitorio", "labelAt": [338, 224] },
+    { "from": "retrying", "to": "processing", "variant": "emphasis", "route": "straight", "fromSide": "top", "toSide": "bottom", "label": "reintenta", "labelDx": 44 },
+    { "from": "processing", "to": "failed", "variant": "default", "fromSide": "bottom", "toSide": "left", "via": [[402, 248], [479, 248], [479, 479]], "label": "sin reintentos", "labelAt": [479, 360] },
+    { "from": "sent", "to": "failed", "variant": "security", "route": "straight", "fromSide": "bottom", "toSide": "top", "label": "webhook failed", "labelAt": [556, 248] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Ruta feliz", "items": ["CREATED → … → DELIVERED", "SENT espera webhook Meta"] },
+    { "dot": "orange", "title": "Reintentos", "items": ["RETRYING con backoff", "hasta 3 intentos BullMQ"] },
+    { "dot": "rose", "title": "Fallos", "items": ["isValidTransition valida", "FAILED admite POST retry"] }
+  ]
+}

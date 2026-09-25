@@ -15,7 +15,10 @@ const VALID_TRANSITIONS: ReadonlyMap<
     ]),
   ],
   [DeliveryStatus.RETRYING, new Set([DeliveryStatus.PROCESSING])],
-  [DeliveryStatus.SENT, new Set([DeliveryStatus.DELIVERED])],
+  [
+    DeliveryStatus.SENT,
+    new Set([DeliveryStatus.DELIVERED, DeliveryStatus.FAILED]),
+  ],
   [DeliveryStatus.DELIVERED, new Set()],
   [DeliveryStatus.FAILED, new Set()],
 ]);

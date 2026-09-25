@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "NotifyService — Flujo de datos de una notificación",
+    "quality_profile": "showcase",
+    "output": "notify-dataflow.html",
+    "viewBox": [1080, 560],
+    "views": [
+      { "id": "primary-lineage", "label": "Linaje principal", "focus": ["emisor", "api", "postgres", "queue", "worker", "meta"], "note": "La notificación viaja de la API a PostgreSQL, la cola, el worker y el proveedor." },
+      { "id": "store-and-queue", "label": "Almacén y cola", "focus": ["api", "postgres", "queue", "worker"], "note": "Persistencia transaccional y encolado con idempotencia." },
+      { "id": "delivery-outputs", "label": "Salidas por canal", "focus": ["worker", "meta", "providers"], "note": "WhatsApp Cloud API frente a los demás canales (email, sms, push)." }
+    ]
+  },
+  "stages": [
+    { "label": "Origen" },
+    { "label": "Ingesta" },
+    { "label": "Almacén" },
+    { "label": "Proceso" },
+    { "label": "Proveedores" }
+  ],
+  "nodes": [
+    { "id": "emisor", "type": "external", "label": "Backend emisor", "sublabel": "evento JWT", "stage": 0, "row": 1, "tag": "client" },
+    { "id": "api", "type": "backend", "label": "API NestJS", "sublabel": "persiste y encola", "stage": 1, "row": 1, "tag": "202" },
+    { "id": "postgres", "type": "database", "label": "PostgreSQL", "sublabel": "notifications · deliveries", "stage": 2, "row": 0, "tag": "fuente de verdad", "width": 150 },
+    { "id": "queue", "type": "messagebus", "label": "BullMQ", "sublabel": "cola", "stage": 2, "row": 2, "tag": "retry ×3" },
+    { "id": "worker", "type": "backend", "label": "Worker", "sublabel": "render + canal", "stage": 3, "row": 1, "tag": "async" },
+    { "id": "meta", "type": "external", "label": "WhatsApp Cloud", "sublabel": "text · HSM", "stage": 4, "row": 0, "tag": "wamid" },
+    { "id": "providers", "type": "external", "label": "SES · Twilio · FCM", "sublabel": "email · sms · push", "stage": 4, "row": 2, "tag": "otros canales" }
+  ],
+  "flows": [
+    { "id": "f-ingest", "from": "emisor", "to": "api", "label": "POST /notifications", "classification": "petición autenticada", "variant": "emphasis", "labelAt": [208, 314] },
+    { "id": "f-persist", "from": "api", "to": "postgres", "label": "INSERT notification + deliveries", "classification": "transacción SQL", "variant": "emphasis" },
+    { "id": "f-enqueue", "from": "api", "to": "queue", "label": "job { notificationId }", "classification": "trabajo asíncrono", "variant": "dashed" },
+    { "id": "f-read", "from": "postgres", "to": "worker", "label": "notification + template activo (language)", "classification": "lectura de plantilla", "variant": "default" },
+    { "id": "f-job", "from": "queue", "to": "worker", "label": "deliver job", "classification": "trigger de proceso", "variant": "dashed" },
+    { "id": "f-send-wa", "from": "worker", "to": "meta", "label": "WhatsApp message + params", "classification": "salida proveedor", "variant": "emphasis" },
+    { "id": "f-send-others", "from": "worker", "to": "providers", "label": "sendEmail · sendSms · sendPush", "classification": "salidas alternativas", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Linaje principal", "items": ["La petición se convierte en notifications + deliveries en una transacción", "El job en BullMQ solo referencia notificationId (estado en BD)", "El worker hidrata plantilla, idioma y datos antes de despachar"] },
+    { "dot": "violet", "title": "Plantillas e idioma", "items": ["template_versions se filtra por (code, channel, language)", "notifications.language (migración 0023) guía la selección", "subject nulo → texto libre; subject con nombre → HSM Meta"] },
+    { "dot": "emerald", "title": "Salidas y correlación", "items": ["WhatsApp devuelve wamid persistido en provider_message_id", "El webhook de Meta actualiza SENT/DELIVERED/FAILED", "Email/sms/push salen por el mismo dispatcher con sus adapters"] }
+  ]
+}

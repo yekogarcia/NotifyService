@@ -18,12 +18,16 @@ export interface DeliveryRepository {
   findByNotificationId(
     notificationId: string,
   ): Promise<NotificationDeliveryEntity[]>;
+  findByProviderMessageId(
+    providerMessageId: string,
+  ): Promise<NotificationDeliveryEntity | null>;
   save(
     delivery: NotificationDeliveryEntity,
   ): Promise<NotificationDeliveryEntity>;
   updateStatus(id: string, status: string): Promise<void>;
   incrementAttemptCount(id: string): Promise<void>;
   updateProviderId(id: string, providerId: string | null): Promise<void>;
+  updateProviderMessageId(id: string, providerMessageId: string): Promise<void>;
 }
 
 export interface AttemptRepository {

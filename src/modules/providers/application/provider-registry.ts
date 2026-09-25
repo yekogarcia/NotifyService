@@ -7,6 +7,7 @@ import { ProviderChannelEntity } from '../domain/entities/provider-channel.entit
 import { EmailProvider } from '../domain/email-provider.interface';
 import { SmsProvider } from '../domain/sms-provider.interface';
 import { PushProvider } from '../domain/push-provider.interface';
+import { WhatsAppProvider } from '../domain/whatsapp-provider.interface';
 import {
   SesAdapter,
   SesAdapterConfig,
@@ -25,6 +26,10 @@ import {
   SmtpAdapter,
   SmtpAdapterConfig,
 } from '../infrastructure/adapters/smtp.adapter';
+import {
+  WhatsAppCloudAdapter,
+  WhatsAppCloudAdapterConfig,
+} from '../infrastructure/adapters/whatsapp-cloud.adapter';
 import { ChannelType, ProviderType } from '../../notifications/domain/enums';
 import { SecretsService } from '../../../shared/infrastructure/security/secrets.service';
 import { RedisService } from '../../../shared/infrastructure/queue/redis.service';
@@ -39,7 +44,7 @@ interface ProviderChannelMapping {
 
 export interface ResolvedProvider {
   providerId: string;
-  provider: EmailProvider | SmsProvider | PushProvider;
+  provider: EmailProvider | SmsProvider | PushProvider | WhatsAppProvider;
 }
 
 @Injectable()
@@ -77,7 +82,9 @@ export class ProviderRegistry {
   async resolveProvider(
     tenantId: string,
     channel: ChannelType,
-  ): Promise<EmailProvider | SmsProvider | PushProvider | null> {
+  ): Promise<
+    EmailProvider | SmsProvider | PushProvider | WhatsAppProvider | null
+  > {
     const resolved = await this.resolve(tenantId, channel);
     return resolved?.provider ?? null;
   }
@@ -146,7 +153,7 @@ export class ProviderRegistry {
 
   private createAdapter(
     mapping: ProviderChannelMapping,
-  ): EmailProvider | SmsProvider | PushProvider {
+  ): EmailProvider | SmsProvider | PushProvider | WhatsAppProvider {
     const secret = this.secrets.decrypt(mapping.secretRef);
 
     switch (mapping.providerType) {
@@ -215,6 +222,15 @@ export class ProviderRegistry {
             fromAddress !== undefined ? String(fromAddress) : undefined,
         } satisfies SmtpAdapterConfig);
       }
+      case ProviderType.WHATSAPP_CLOUD:
+        return new WhatsAppCloudAdapter({
+          phoneNumberId: String(mapping.config.phoneNumberId ?? ''),
+          accessToken: secret,
+          apiVersion:
+            mapping.config.apiVersion !== undefined
+              ? String(mapping.config.apiVersion)
+              : undefined,
+        } satisfies WhatsAppCloudAdapterConfig);
       default:
         throw new Error(`Unknown provider type: ${mapping.providerType}`);
     }

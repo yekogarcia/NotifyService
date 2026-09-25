@@ -30,6 +30,14 @@ describe('Delivery Status State Machine', () => {
     expect(isValidTransition(DeliveryStatus.SENT, DeliveryStatus.DELIVERED)).toBe(true);
   });
 
+  it('should allow SENT → FAILED (webhook failure after send)', () => {
+    expect(isValidTransition(DeliveryStatus.SENT, DeliveryStatus.FAILED)).toBe(true);
+  });
+
+  it('should not allow DELIVERED → FAILED', () => {
+    expect(isValidTransition(DeliveryStatus.DELIVERED, DeliveryStatus.FAILED)).toBe(false);
+  });
+
   it('should not allow CREATED → DELIVERED', () => {
     expect(isValidTransition(DeliveryStatus.CREATED, DeliveryStatus.DELIVERED)).toBe(false);
   });
