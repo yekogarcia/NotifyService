@@ -1,9 +1,10 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { TemplateRenderer } from '../application/template-renderer';
+import { AppLoggerService } from '../../../shared/infrastructure/logger/logger.service';
 
 @Injectable()
 export class ValidateVariablesUseCase {
-  private readonly logger = new Logger(ValidateVariablesUseCase.name);
+  private readonly logger = new AppLoggerService();
 
   constructor(
     @Inject('TemplateRenderer') private readonly renderer: TemplateRenderer,

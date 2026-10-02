@@ -3,10 +3,8 @@ import {
   DeliveryRepository,
   NotificationRepository,
 } from '../domain/repositories';
-import {
-  DeliveryStatus,
-  NotificationStatus,
-} from '../domain/enums';
+import { DeliveryStatus, NotificationStatus } from '../domain/enums';
+import { AppLoggerService } from '../../../shared/infrastructure/logger/logger.service';
 
 const PENDING: ReadonlySet<string> = new Set([
   DeliveryStatus.CREATED,
@@ -24,6 +22,8 @@ const PENDING: ReadonlySet<string> = new Set([
  */
 @Injectable()
 export class RefreshNotificationStatusUseCase {
+  private readonly logger = new AppLoggerService();
+
   constructor(
     @Inject('DeliveryRepository')
     private readonly deliveryRepo: DeliveryRepository,
@@ -40,9 +40,7 @@ export class RefreshNotificationStatusUseCase {
 
     const statuses = deliveries.map((d) => d.status);
     const pending = statuses.filter((s) => PENDING.has(s)).length;
-    const failed = statuses.filter(
-      (s) => s === DeliveryStatus.FAILED,
-    ).length;
+    const failed = statuses.filter((s) => s === DeliveryStatus.FAILED).length;
     const sent = statuses.filter((s) => s === DeliveryStatus.SENT).length;
     const delivered = statuses.filter(
       (s) => s === DeliveryStatus.DELIVERED,
@@ -52,15 +50,20 @@ export class RefreshNotificationStatusUseCase {
     let next: NotificationStatus | null = null;
     if (failed === total) next = NotificationStatus.FAILED;
     else if (sent + delivered === total)
-      next = sent === 0 ? NotificationStatus.DELIVERED : NotificationStatus.SENT;
+      next =
+        sent === 0 ? NotificationStatus.DELIVERED : NotificationStatus.SENT;
     else if (pending > 0 && failed + sent + delivered > 0)
       next = NotificationStatus.PROCESSING;
 
-    if (
-      next &&
-      next !== (notification.status as NotificationStatus)
-    ) {
+    if (next && next !== (notification.status as NotificationStatus)) {
       await this.notificationRepo.updateStatus(notificationId, next);
+      this.logger.log('Notification status changed', {
+        type: 'notification_status',
+        notificationId,
+        previousStatus: notification.status,
+        newStatus: next,
+        deliveries: { total, pending, failed, sent, delivered },
+      });
       return next;
     }
     return null;

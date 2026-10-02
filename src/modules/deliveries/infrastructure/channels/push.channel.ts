@@ -7,12 +7,14 @@ import {
 import { PushProvider } from '../../../providers/domain/push-provider.interface';
 import { ProviderRegistry } from '../../../providers/application/provider-registry';
 import { ChannelType } from '../../../notifications/domain/enums';
+import { AppLoggerService } from '../../../../shared/infrastructure/logger/logger.service';
 
 @Injectable()
 export class PushChannel implements NotificationChannel {
   constructor(
     private readonly registry: ProviderRegistry,
     @Inject('PushProvider') private readonly fallback: PushProvider,
+    private readonly logger: AppLoggerService = new AppLoggerService(),
   ) {}
 
   async send(context: SendContext): Promise<SendResult> {
@@ -22,7 +24,26 @@ export class PushChannel implements NotificationChannel {
     );
     const candidate = resolved?.provider ?? this.fallback;
 
+    this.logger.log('Sending via PUSH channel', {
+      type: 'channel_send',
+      channel: ChannelType.PUSH,
+      deliveryId: context.deliveryId,
+      to: context.to,
+      providerSource: resolved ? 'tenant_registry' : 'env_fallback',
+      providerId: resolved?.providerId,
+    });
+
     if (!this.isPushProvider(candidate)) {
+      this.logger.error(
+        'Resolved provider for PUSH is not a push provider',
+        undefined,
+        {
+          type: 'channel_send',
+          channel: ChannelType.PUSH,
+          deliveryId: context.deliveryId,
+          providerSource: resolved ? 'tenant_registry' : 'env_fallback',
+        },
+      );
       return {
         success: false,
         errorType: 'ConfigurationError',

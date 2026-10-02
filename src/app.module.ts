@@ -1,14 +1,15 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { DeliveriesModule } from './modules/deliveries/deliveries.module';
 import { TemplatesModule } from './modules/templates/templates.module';
 import { PreferencesModule } from './modules/preferences/preferences.module';
 import { ProvidersModule } from './modules/providers/providers.module';
-import { DashboardModule } from './modules/dashboard/dashboard.module';import { TenantsModule } from './modules/tenants/tenants.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { TenantsModule } from './modules/tenants/tenants.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DatabaseModule } from './shared/infrastructure/database/database.module';
@@ -29,6 +30,9 @@ import { ApplicationEntity } from './modules/applications/domain/entities/applic
 import { OAuthTokenEntity } from './modules/auth/domain/entities/oauth-token.entity';
 import { NotificationEventEntity } from './modules/notifications/domain/entities/notification-event.entity';
 import { AuthGuard } from './shared/infrastructure/guards/auth.guard';
+import { CorrelationMiddleware } from './shared/infrastructure/middleware/correlation.middleware';
+import { HttpLoggingInterceptor } from './shared/infrastructure/logging/http-logging.interceptor';
+import { AllExceptionsFilter } from './shared/infrastructure/logging/all-exceptions.filter';
 
 @Module({
   imports: [
@@ -76,6 +80,18 @@ import { AuthGuard } from './shared/infrastructure/guards/auth.guard';
       provide: APP_GUARD,
       useClass: AuthGuard,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpLoggingInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CorrelationMiddleware).forRoutes('*');
+  }
+}

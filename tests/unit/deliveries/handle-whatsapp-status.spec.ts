@@ -17,8 +17,12 @@ describe('HandleWhatsappStatusUseCase', () => {
       findByProviderMessageId: jest.fn().mockResolvedValue(delivery),
       updateStatus: jest.fn().mockResolvedValue(undefined),
     };
+    const refreshStatus = { refresh: jest.fn().mockResolvedValue(null) };
     return {
-      useCase: new HandleWhatsappStatusUseCase(repo as never),
+      useCase: new HandleWhatsappStatusUseCase(
+        repo as never,
+        refreshStatus as never,
+      ),
       repo,
     };
   }

@@ -1,10 +1,11 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { DeliveryRepository } from '../../notifications/domain/repositories';
 import { DeliveryStatus } from '../../notifications/domain/enums';
 import { RefreshNotificationStatusUseCase } from '../../notifications/application/refresh-notification-status';
 import { isValidTransition } from '../domain/delivery-status';
+import { AppLoggerService } from '../../../shared/infrastructure/logger/logger.service';
 
 export interface WhatsappStatusUpdate {
   wamid: string;
@@ -33,13 +34,16 @@ export interface WhatsappWebhookPayload {
 
 @Injectable()
 export class HandleWhatsappStatusUseCase {
-  private readonly logger = new Logger(HandleWhatsappStatusUseCase.name);
+  private readonly logger: AppLoggerService;
 
   constructor(
     @Inject('DeliveryRepository')
     private readonly deliveryRepo: DeliveryRepository,
     private readonly refreshStatus: RefreshNotificationStatusUseCase,
-  ) {}
+    logger?: AppLoggerService,
+  ) {
+    this.logger = logger ?? new AppLoggerService();
+  }
 
   parseStatuses(payload: WhatsappWebhookPayload): WhatsappStatusUpdate[] {
     const updates: WhatsappStatusUpdate[] = [];
@@ -65,6 +69,15 @@ export class HandleWhatsappStatusUseCase {
     const updates = this.parseStatuses(payload);
     let applied = 0;
 
+    this.logger.log('WhatsApp webhook received', {
+      type: 'webhook_whatsapp',
+      updatesCount: updates.length,
+      statuses: updates.map((u) => ({
+        wamid: u.wamid,
+        status: u.status,
+      })),
+    });
+
     for (const update of updates) {
       try {
         const handled = await this.apply(update);
@@ -74,9 +87,20 @@ export class HandleWhatsappStatusUseCase {
           `Failed to apply status ${update.status} for ${update.wamid}: ${
             err instanceof Error ? err.message : 'unknown error'
           }`,
+          {
+            type: 'webhook_whatsapp',
+            wamid: update.wamid,
+            status: update.status,
+          },
         );
       }
     }
+
+    this.logger.log('WhatsApp webhook processed', {
+      type: 'webhook_whatsapp',
+      updatesCount: updates.length,
+      applied,
+    });
 
     return applied;
   }
@@ -86,7 +110,11 @@ export class HandleWhatsappStatusUseCase {
       update.wamid,
     );
     if (!delivery) {
-      this.logger.warn(`No delivery found for wamid ${update.wamid}`);
+      this.logger.warn(`No delivery found for wamid ${update.wamid}`, {
+        type: 'webhook_whatsapp',
+        wamid: update.wamid,
+        status: update.status,
+      });
       return false;
     }
 
@@ -94,6 +122,11 @@ export class HandleWhatsappStatusUseCase {
     if (!target) {
       this.logger.debug(
         `Ignoring webhook status "${update.status}" for delivery ${delivery.id}`,
+        {
+          type: 'webhook_whatsapp',
+          deliveryId: delivery.id,
+          wamid: update.wamid,
+        },
       );
       return false;
     }
@@ -105,6 +138,13 @@ export class HandleWhatsappStatusUseCase {
     if (!isValidTransition(delivery.status, target)) {
       this.logger.warn(
         `Invalid transition ${delivery.status} → ${target} for delivery ${delivery.id} (wamid ${update.wamid})`,
+        {
+          type: 'webhook_whatsapp',
+          deliveryId: delivery.id,
+          wamid: update.wamid,
+          currentStatus: delivery.status,
+          targetStatus: target,
+        },
       );
       return false;
     }
@@ -113,10 +153,25 @@ export class HandleWhatsappStatusUseCase {
     await this.refreshStatus.refresh(delivery.notificationId);
     this.logger.log(
       `Delivery ${delivery.id} → ${target} via WhatsApp webhook (${update.wamid})`,
+      {
+        type: 'webhook_whatsapp',
+        deliveryId: delivery.id,
+        notificationId: delivery.notificationId,
+        wamid: update.wamid,
+        previousStatus: delivery.status,
+        newStatus: target,
+      },
     );
     if (update.errorMessage) {
       this.logger.warn(
         `WhatsApp failure detail for ${delivery.id}: ${update.errorCode ?? ''} ${update.errorMessage}`,
+        {
+          type: 'webhook_whatsapp',
+          deliveryId: delivery.id,
+          wamid: update.wamid,
+          errorCode: update.errorCode,
+          errorMessage: update.errorMessage,
+        },
       );
     }
     return true;

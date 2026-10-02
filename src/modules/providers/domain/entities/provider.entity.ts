@@ -6,7 +6,10 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-import { ProviderType, ProviderStatus } from '../../../notifications/domain/enums';
+import {
+  ProviderType,
+  ProviderStatus,
+} from '../../../notifications/domain/enums';
 
 @Entity('notification_providers')
 @Index('idx_provider_tenant_type', ['tenantId', 'providerType'])

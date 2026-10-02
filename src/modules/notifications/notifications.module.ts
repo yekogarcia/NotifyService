@@ -16,6 +16,7 @@ import { IdempotencyCheckUseCase } from './application/use-cases/create-notifica
 import { ValidateTemplateUseCase } from './application/use-cases/create-notification/validate-template';
 import { RefreshNotificationStatusUseCase } from './application/refresh-notification-status';
 import { QueueModule } from '../../shared/infrastructure/queue/queue.module';
+import { SharedModule } from '../../shared/shared.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { QueueModule } from '../../shared/infrastructure/queue/queue.module';
       ApplicationEntity,
     ]),
     QueueModule,
+    SharedModule,
   ],
   controllers: [NotificationController],
   providers: [

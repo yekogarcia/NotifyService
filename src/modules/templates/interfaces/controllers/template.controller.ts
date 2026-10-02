@@ -38,7 +38,10 @@ import {
   UpdateTemplateUseCase,
   DeleteTemplateUseCase,
 } from '../../application/use-cases/manage-template.use-case';
-import { ChannelType, TemplateStatus } from '../../../notifications/domain/enums';
+import {
+  ChannelType,
+  TemplateStatus,
+} from '../../../notifications/domain/enums';
 import { AuthenticatedRequest } from '../../../../shared/infrastructure/guards/auth.guard';
 import { AdminGuard } from '../../../auth/infrastructure/guards/admin.guard';
 
@@ -245,8 +248,7 @@ export class TemplateController {
 
   @Delete(':code')
   @ApiOperation({
-    summary:
-      'Delete template + versions (only if no notification uses it)',
+    summary: 'Delete template + versions (only if no notification uses it)',
     description:
       'Solo se elimina si ninguna notificación usa ese código (las ' +
       'notificaciones referencian por template_code). Las versiones se ' +
@@ -288,7 +290,8 @@ export class TemplateController {
   }
 
   @Patch(':code/versions/:version')
-  @ApiOperation({ summary: 'Update subject/body of a template version' })  @ApiParam({
+  @ApiOperation({ summary: 'Update subject/body of a template version' })
+  @ApiParam({
     name: 'code',
     description: 'Template unique code',
     example: 'welcome-email',

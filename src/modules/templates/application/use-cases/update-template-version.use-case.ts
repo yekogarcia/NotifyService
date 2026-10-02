@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { NotificationTemplateVersionEntity } from '../../domain/entities/template-version.entity';
@@ -50,7 +54,12 @@ export class UpdateTemplateVersionUseCase {
     version: number,
     language: string,
     channel: ChannelType,
-    input: { subject?: string | null; body?: string; language?: string; channel?: ChannelType },
+    input: {
+      subject?: string | null;
+      body?: string;
+      language?: string;
+      channel?: ChannelType;
+    },
   ): Promise<NotificationTemplateVersionEntity> {
     const target = await this.versionRepo.findOne({
       where: { templateId, version, language, channel },
@@ -64,10 +73,7 @@ export class UpdateTemplateVersionUseCase {
     // al cambiarlos se valida que no exista ya esa combinación.
     const nextLanguage = input.language ?? target.language;
     const nextChannel = input.channel ?? target.channel;
-    if (
-      nextLanguage !== target.language ||
-      nextChannel !== target.channel
-    ) {
+    if (nextLanguage !== target.language || nextChannel !== target.channel) {
       const clash = await this.versionRepo.findOne({
         where: {
           templateId,

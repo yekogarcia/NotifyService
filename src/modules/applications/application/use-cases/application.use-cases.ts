@@ -165,7 +165,9 @@ export class DeleteApplicationUseCase {
     const blocking = await this.findAssociations(id);
     const entries = Object.entries(blocking).filter(([, count]) => count > 0);
     if (entries.length > 0) {
-      const detail = entries.map(([key, count]) => `${key} (${count})`).join(', ');
+      const detail = entries
+        .map(([key, count]) => `${key} (${count})`)
+        .join(', ');
       throw new ConflictException({
         message: `Cannot delete application with associated records: ${detail}`,
         blocking: Object.fromEntries(entries),

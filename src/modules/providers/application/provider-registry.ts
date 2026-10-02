@@ -30,7 +30,11 @@ import {
   WhatsAppCloudAdapter,
   WhatsAppCloudAdapterConfig,
 } from '../infrastructure/adapters/whatsapp-cloud.adapter';
-import { ChannelType, ProviderType, ProviderStatus } from '../../notifications/domain/enums';
+import {
+  ChannelType,
+  ProviderType,
+  ProviderStatus,
+} from '../../notifications/domain/enums';
 import { SecretsService } from '../../../shared/infrastructure/security/secrets.service';
 import { RedisService } from '../../../shared/infrastructure/queue/redis.service';
 

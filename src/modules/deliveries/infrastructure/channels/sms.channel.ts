@@ -7,12 +7,14 @@ import {
 import { SmsProvider } from '../../../providers/domain/sms-provider.interface';
 import { ProviderRegistry } from '../../../providers/application/provider-registry';
 import { ChannelType } from '../../../notifications/domain/enums';
+import { AppLoggerService } from '../../../../shared/infrastructure/logger/logger.service';
 
 @Injectable()
 export class SmsChannel implements NotificationChannel {
   constructor(
     private readonly registry: ProviderRegistry,
     @Inject('SmsProvider') private readonly fallback: SmsProvider,
+    private readonly logger: AppLoggerService = new AppLoggerService(),
   ) {}
 
   async send(context: SendContext): Promise<SendResult> {
@@ -22,7 +24,26 @@ export class SmsChannel implements NotificationChannel {
     );
     const candidate = resolved?.provider ?? this.fallback;
 
+    this.logger.log('Sending via SMS channel', {
+      type: 'channel_send',
+      channel: ChannelType.SMS,
+      deliveryId: context.deliveryId,
+      to: context.to,
+      providerSource: resolved ? 'tenant_registry' : 'env_fallback',
+      providerId: resolved?.providerId,
+    });
+
     if (!this.isSmsProvider(candidate)) {
+      this.logger.error(
+        'Resolved provider for SMS is not an SMS provider',
+        undefined,
+        {
+          type: 'channel_send',
+          channel: ChannelType.SMS,
+          deliveryId: context.deliveryId,
+          providerSource: resolved ? 'tenant_registry' : 'env_fallback',
+        },
+      );
       return {
         success: false,
         errorType: 'ConfigurationError',

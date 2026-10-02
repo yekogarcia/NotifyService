@@ -677,7 +677,8 @@ export class ProviderController {
     return byProvider;
   }
 
-  private buildSecretRef(    secret: string | undefined,
+  private buildSecretRef(
+    secret: string | undefined,
     secretRef: string | undefined,
     required: boolean,
   ): string {

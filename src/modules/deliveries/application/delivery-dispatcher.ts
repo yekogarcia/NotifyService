@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { ChannelRegistry } from './channel-registry';
 import {
   DeliveryRepository,
@@ -11,6 +11,7 @@ import {
 import { NotificationAttemptEntity } from '../../notifications/domain/entities/notification-attempt.entity';
 import { isValidTransition } from '../domain/delivery-status';
 import { RefreshNotificationStatusUseCase } from '../../notifications/application/refresh-notification-status';
+import { AppLoggerService } from '../../../shared/infrastructure/logger/logger.service';
 
 export interface RenderedContent {
   to: string;
@@ -24,8 +25,6 @@ export interface RenderedContent {
 
 @Injectable()
 export class DeliveryDispatcher {
-  private readonly logger = new Logger(DeliveryDispatcher.name);
-
   constructor(
     private readonly channelRegistry: ChannelRegistry,
     @Inject('DeliveryRepository')
@@ -33,14 +32,20 @@ export class DeliveryDispatcher {
     @Inject('AttemptRepository')
     private readonly attemptRepo: AttemptRepository,
     private readonly refreshStatus: RefreshNotificationStatusUseCase,
+    private readonly logger: AppLoggerService,
   ) {}
 
   async dispatch(
     deliveryId: string,
     renderedContent: RenderedContent,
   ): Promise<void> {
+    const start = Date.now();
     const delivery = await this.deliveryRepo.findById(deliveryId);
     if (!delivery) {
+      this.logger.error('Delivery not found, cannot dispatch', undefined, {
+        type: 'delivery_dispatch',
+        deliveryId,
+      });
       throw new Error(`Delivery not found: ${deliveryId}`);
     }
 
@@ -58,6 +63,15 @@ export class DeliveryDispatcher {
     }
 
     const channel = this.channelRegistry.getChannel(delivery.channel);
+
+    this.logger.log('Dispatching delivery to channel', {
+      type: 'delivery_dispatch',
+      deliveryId,
+      notificationId: delivery.notificationId,
+      channel: delivery.channel,
+      to: renderedContent.to,
+      attemptNumber: delivery.attemptCount + 1,
+    });
 
     let result;
     try {
@@ -78,6 +92,18 @@ export class DeliveryDispatcher {
           error instanceof Error ? error.constructor.name : 'UnknownError',
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
       };
+      this.logger.error(
+        'Channel send threw an exception',
+        error instanceof Error ? error.stack : String(error),
+        {
+          type: 'delivery_dispatch',
+          deliveryId,
+          notificationId: delivery.notificationId,
+          channel: delivery.channel,
+          to: renderedContent.to,
+          errorMessage: result.errorMessage,
+        },
+      );
     }
 
     if (result.providerId) {
@@ -104,17 +130,35 @@ export class DeliveryDispatcher {
       await this.attemptRepo.save(attempt);
       await this.deliveryRepo.incrementAttemptCount(deliveryId);
       await this.deliveryRepo.updateStatus(deliveryId, DeliveryStatus.SENT);
-      this.logger.log(
-        `Delivery ${deliveryId} sent successfully (attempt ${attemptNumber})`,
-      );
+      this.logger.log('Delivery sent successfully', {
+        type: 'delivery_dispatch',
+        deliveryId,
+        notificationId: delivery.notificationId,
+        channel: delivery.channel,
+        to: renderedContent.to,
+        attemptNumber,
+        providerId: result.providerId,
+        providerMessageId: result.providerMessageId,
+        newStatus: DeliveryStatus.SENT,
+        durationMs: Date.now() - start,
+      });
     } else {
       attempt.result = AttemptResult.TRANSIENT_ERROR;
       await this.attemptRepo.save(attempt);
       await this.deliveryRepo.incrementAttemptCount(deliveryId);
       await this.deliveryRepo.updateStatus(deliveryId, DeliveryStatus.FAILED);
-      this.logger.warn(
-        `Delivery ${deliveryId} failed: ${result.errorType ?? 'unknown'} - ${result.errorMessage ?? 'no message'}`,
-      );
+      this.logger.warn('Delivery failed', {
+        type: 'delivery_dispatch',
+        deliveryId,
+        notificationId: delivery.notificationId,
+        channel: delivery.channel,
+        to: renderedContent.to,
+        attemptNumber,
+        errorType: result.errorType ?? 'unknown',
+        errorMessage: result.errorMessage ?? 'no message',
+        newStatus: DeliveryStatus.FAILED,
+        durationMs: Date.now() - start,
+      });
     }
     // La notificación agrega el estado de sus deliveries (si no, queda QUEUED).
     await this.refreshStatus.refresh(delivery.notificationId);

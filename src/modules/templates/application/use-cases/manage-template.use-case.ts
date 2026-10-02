@@ -93,11 +93,7 @@ export class DeleteTemplateUseCase {
     code: string,
     applicationId?: string,
   ): Promise<{ id: string; code: string; deleted: boolean; usage: number }> {
-    const template = await this.resolver.resolve(
-      tenantId,
-      code,
-      applicationId,
-    );
+    const template = await this.resolver.resolve(tenantId, code, applicationId);
     const usage = await this.notificationRepo.count({
       where: {
         tenantId,

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { QueueModule } from '../../shared/infrastructure/queue/queue.module';
+import { SharedModule } from '../../shared/shared.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { TemplatesModule } from '../templates/templates.module';
@@ -29,6 +30,7 @@ import { HandleWhatsappStatusUseCase } from './application/handle-whatsapp-statu
   imports: [
     TypeOrmModule.forFeature([NotificationTemplateVersionEntity]),
     QueueModule,
+    SharedModule,
     NotificationsModule,
     ProvidersModule,
     TemplatesModule,

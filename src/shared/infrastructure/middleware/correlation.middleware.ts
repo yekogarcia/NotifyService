@@ -13,6 +13,7 @@ export class CorrelationMiddleware implements NestMiddleware {
     res.setHeader('X-Correlation-Id', correlationId);
 
     (req as unknown as Record<string, unknown>).correlationId = correlationId;
+    (req as unknown as Record<string, unknown>).startTime = Date.now();
 
     next();
   }

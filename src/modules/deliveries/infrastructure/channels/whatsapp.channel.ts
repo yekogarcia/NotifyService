@@ -7,12 +7,14 @@ import {
 import { WhatsAppProvider } from '../../../providers/domain/whatsapp-provider.interface';
 import { ProviderRegistry } from '../../../providers/application/provider-registry';
 import { ChannelType } from '../../../notifications/domain/enums';
+import { AppLoggerService } from '../../../../shared/infrastructure/logger/logger.service';
 
 @Injectable()
 export class WhatsappChannel implements NotificationChannel {
   constructor(
     private readonly registry: ProviderRegistry,
     @Inject('WhatsAppProvider') private readonly fallback: WhatsAppProvider,
+    private readonly logger: AppLoggerService = new AppLoggerService(),
   ) {}
 
   async send(context: SendContext): Promise<SendResult> {
@@ -22,7 +24,27 @@ export class WhatsappChannel implements NotificationChannel {
     );
     const candidate = resolved?.provider ?? this.fallback;
 
+    this.logger.log('Sending via WHATSAPP channel', {
+      type: 'channel_send',
+      channel: ChannelType.WHATSAPP,
+      deliveryId: context.deliveryId,
+      to: context.to,
+      mode: context.subject ? 'template' : 'text',
+      providerSource: resolved ? 'tenant_registry' : 'env_fallback',
+      providerId: resolved?.providerId,
+    });
+
     if (!this.isWhatsAppProvider(candidate)) {
+      this.logger.error(
+        'Resolved provider for WHATSAPP is not a WhatsApp provider',
+        undefined,
+        {
+          type: 'channel_send',
+          channel: ChannelType.WHATSAPP,
+          deliveryId: context.deliveryId,
+          providerSource: resolved ? 'tenant_registry' : 'env_fallback',
+        },
+      );
       return {
         success: false,
         errorType: 'ConfigurationError',

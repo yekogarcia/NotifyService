@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -78,10 +72,7 @@ const RANGE_NOTE =
 export class DashboardController {
   constructor(private readonly dashboard: DashboardService) {}
 
-  private filters(
-    tenantId: string,
-    q: DashboardQuery,
-  ): DashboardFilters {
+  private filters(tenantId: string, q: DashboardQuery): DashboardFilters {
     return {
       tenantId,
       from: q.from,
@@ -112,9 +103,7 @@ export class DashboardController {
     },
   })
   summary(@Req() req: AuthenticatedRequest, @Query() q: DashboardQuery) {
-    return this.dashboard.summary(
-      this.filters(req.user!.tenantId, q),
-    );
+    return this.dashboard.summary(this.filters(req.user!.tenantId, q));
   }
 
   @Get('volume')
@@ -182,10 +171,7 @@ export class DashboardController {
       },
     ],
   })
-  byApplication(
-    @Req() req: AuthenticatedRequest,
-    @Query() q: LimitQuery,
-  ) {
+  byApplication(@Req() req: AuthenticatedRequest, @Query() q: LimitQuery) {
     return this.dashboard.byApplication(
       this.filters(req.user!.tenantId, q),
       q.limit ?? 10,
