@@ -7,7 +7,7 @@ import { NOTIFICATION_QUEUE } from '../../../../shared/infrastructure/queue/queu
 import { NotificationRepository } from '../../../notifications/domain/repositories';
 import { NotificationTemplateVersionEntity } from '../../../templates/domain/entities/template-version.entity';
 import { NotificationRecipientEntity } from '../../../notifications/domain/entities/notification-recipient.entity';
-import { ChannelType } from '../../../notifications/domain/enums';
+import { ChannelType, TemplateStatus } from '../../../notifications/domain/enums';
 import { TemplateRenderer } from '../../../templates/application/template-renderer';
 import {
   DeliveryDispatcher,
@@ -94,6 +94,7 @@ export class DeliveryWorker implements OnModuleDestroy {
           template: {
             tenantId: notification.tenantId,
             code: notification.templateCode,
+            status: TemplateStatus.ACTIVE,
           },
           channel: delivery.channel,
           language,
@@ -122,6 +123,7 @@ export class DeliveryWorker implements OnModuleDestroy {
         body,
         language: templateVersion.language,
         templateParams,
+        from: templateVersion.template.fromEmail ?? undefined,
       };
 
       await this.dispatcher.dispatch(delivery.id, content);

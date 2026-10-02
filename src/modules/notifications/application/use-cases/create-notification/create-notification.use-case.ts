@@ -52,10 +52,12 @@ export class CreateNotificationUseCase {
     }
     const correlationId = randomUUID();
     const language = dto.language ?? 'es';
+    // Sin clave del cliente no hay deduplicación posible: se genera UUID.
+    const idempotencyKey = dto.idempotencyKey?.trim() || randomUUID();
 
     const existing = await this.idempotencyCheck.execute(
       tenantId,
-      dto.idempotencyKey,
+      idempotencyKey,
     );
     if (existing) {
       return {
@@ -88,7 +90,7 @@ export class CreateNotificationUseCase {
         templateCode: dto.templateCode,
         language,
         data: dto.data ?? {},
-        idempotencyKey: dto.idempotencyKey,
+        idempotencyKey,
         status: NotificationStatus.QUEUED,
         correlationId,
         eventId: null,

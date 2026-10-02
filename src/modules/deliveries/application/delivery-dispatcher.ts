@@ -10,6 +10,7 @@ import {
 } from '../../notifications/domain/enums';
 import { NotificationAttemptEntity } from '../../notifications/domain/entities/notification-attempt.entity';
 import { isValidTransition } from '../domain/delivery-status';
+import { RefreshNotificationStatusUseCase } from '../../notifications/application/refresh-notification-status';
 
 export interface RenderedContent {
   to: string;
@@ -17,6 +18,8 @@ export interface RenderedContent {
   body: string;
   language?: string;
   templateParams?: string[];
+  /** Remitente de la plantilla (solo EMAIL; fallback al del proveedor). */
+  from?: string;
 }
 
 @Injectable()
@@ -29,6 +32,7 @@ export class DeliveryDispatcher {
     private readonly deliveryRepo: DeliveryRepository,
     @Inject('AttemptRepository')
     private readonly attemptRepo: AttemptRepository,
+    private readonly refreshStatus: RefreshNotificationStatusUseCase,
   ) {}
 
   async dispatch(
@@ -65,6 +69,7 @@ export class DeliveryDispatcher {
         body: renderedContent.body,
         language: renderedContent.language,
         templateParams: renderedContent.templateParams,
+        from: renderedContent.from,
       });
     } catch (error) {
       result = {
@@ -111,5 +116,7 @@ export class DeliveryDispatcher {
         `Delivery ${deliveryId} failed: ${result.errorType ?? 'unknown'} - ${result.errorMessage ?? 'no message'}`,
       );
     }
+    // La notificación agrega el estado de sus deliveries (si no, queda QUEUED).
+    await this.refreshStatus.refresh(delivery.notificationId);
   }
 }

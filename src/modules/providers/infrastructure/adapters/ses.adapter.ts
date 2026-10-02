@@ -23,10 +23,11 @@ export class SesAdapter implements EmailProvider {
     to: string,
     subject: string,
     body: string,
+    from?: string,
   ): Promise<ProviderResult> {
     try {
       const command = new SendEmailCommand({
-        Source: this.fromAddress,
+        Source: from?.trim() || this.fromAddress,
         Destination: { ToAddresses: [to] },
         Message: {
           Subject: { Data: subject },

@@ -22,6 +22,7 @@ import { ChannelRegistry } from './application/channel-registry';
 import { DeliveryDispatcher } from './application/delivery-dispatcher';
 import { DeliveryWorker } from './infrastructure/workers/delivery.worker';
 import { WhatsappWebhookController } from './interfaces/controllers/whatsapp-webhook.controller';
+import { DeliveryController } from './interfaces/controllers/delivery.controller';
 import { HandleWhatsappStatusUseCase } from './application/handle-whatsapp-status.use-case';
 
 @Module({
@@ -32,7 +33,7 @@ import { HandleWhatsappStatusUseCase } from './application/handle-whatsapp-statu
     ProvidersModule,
     TemplatesModule,
   ],
-  controllers: [WhatsappWebhookController],
+  controllers: [WhatsappWebhookController, DeliveryController],
   providers: [
     {
       provide: 'EmailProvider',

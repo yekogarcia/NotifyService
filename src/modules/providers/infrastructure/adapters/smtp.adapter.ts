@@ -36,8 +36,10 @@ export class SmtpAdapter implements EmailProvider {
     to: string,
     subject: string,
     body: string,
+    from?: string,
   ): Promise<ProviderResult> {
-    if (!this.from.includes('@')) {
+    const sender = from?.trim() || this.from;
+    if (!sender.includes('@')) {
       return {
         success: false,
         errorType: 'ConfigurationError',
@@ -48,7 +50,7 @@ export class SmtpAdapter implements EmailProvider {
 
     try {
       const info = await this.transporter.sendMail({
-        from: this.from,
+        from: sender,
         to,
         subject,
         html: body,

@@ -92,10 +92,26 @@ export class ApplicationController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete application' })
+  @ApiOperation({
+    summary: 'Delete application (only if it has no associated records)',
+    description:
+      'Solo se elimina si la aplicación NO está asociada a notificaciones, ' +
+      'plantillas, preferencias, dispositivos, eventos ni tokens (los FK son ' +
+      'ON DELETE CASCADE). Si tiene algo asociado responde 409 con el detalle ' +
+      'de lo que la bloquea.',
+  })
   @ApiParam({ name: 'id', type: String })
   @ApiResponse({ status: 204, description: 'Application deleted' })
   @ApiResponse({ status: 404, description: 'Application not found' })
+  @ApiResponse({
+    status: 409,
+    description: 'Application has associated records and cannot be deleted',
+    example: {
+      message:
+        'Cannot delete application with associated records: notifications (2), templates (1)',
+      blocking: { notifications: 2, templates: 1 },
+    },
+  })
   async remove(
     @Req() req: AuthenticatedRequest,
     @Param('id', ParseUUIDPipe) id: string,

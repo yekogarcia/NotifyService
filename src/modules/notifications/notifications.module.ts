@@ -7,12 +7,14 @@ import { NotificationDeliveryEntity } from './domain/entities/notification-deliv
 import { NotificationAttemptEntity } from './domain/entities/notification-attempt.entity';
 import { NotificationTemplateVersionEntity } from '../templates/domain/entities/template-version.entity';
 import { NotificationTemplateEntity } from '../templates/domain/entities/template.entity';
+import { ApplicationEntity } from '../applications/domain/entities/application.entity';
 import { NotificationRepositoryImpl } from './infrastructure/persistence/notification.repository.impl';
 import { DeliveryRepositoryImpl } from './infrastructure/persistence/delivery.repository.impl';
 import { AttemptRepositoryImpl } from './infrastructure/persistence/attempt.repository.impl';
 import { CreateNotificationUseCase } from './application/use-cases/create-notification/create-notification.use-case';
 import { IdempotencyCheckUseCase } from './application/use-cases/create-notification/idempotency-check';
 import { ValidateTemplateUseCase } from './application/use-cases/create-notification/validate-template';
+import { RefreshNotificationStatusUseCase } from './application/refresh-notification-status';
 import { QueueModule } from '../../shared/infrastructure/queue/queue.module';
 
 @Module({
@@ -24,6 +26,7 @@ import { QueueModule } from '../../shared/infrastructure/queue/queue.module';
       NotificationAttemptEntity,
       NotificationTemplateEntity,
       NotificationTemplateVersionEntity,
+      ApplicationEntity,
     ]),
     QueueModule,
   ],
@@ -44,9 +47,11 @@ import { QueueModule } from '../../shared/infrastructure/queue/queue.module';
     IdempotencyCheckUseCase,
     ValidateTemplateUseCase,
     CreateNotificationUseCase,
+    RefreshNotificationStatusUseCase,
   ],
   exports: [
     CreateNotificationUseCase,
+    RefreshNotificationStatusUseCase,
     'NotificationRepository',
     'DeliveryRepository',
     'AttemptRepository',

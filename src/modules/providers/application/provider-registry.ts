@@ -30,7 +30,7 @@ import {
   WhatsAppCloudAdapter,
   WhatsAppCloudAdapterConfig,
 } from '../infrastructure/adapters/whatsapp-cloud.adapter';
-import { ChannelType, ProviderType } from '../../notifications/domain/enums';
+import { ChannelType, ProviderType, ProviderStatus } from '../../notifications/domain/enums';
 import { SecretsService } from '../../../shared/infrastructure/security/secrets.service';
 import { RedisService } from '../../../shared/infrastructure/queue/redis.service';
 
@@ -135,6 +135,11 @@ export class ProviderRegistry {
       },
     });
     if (!provider) return null;
+    if (
+      (provider as { status?: ProviderStatus }).status ===
+      ProviderStatus.DELETED
+    )
+      return null;
 
     const mapping: ProviderChannelMapping = {
       providerId: provider.id,
@@ -156,8 +161,13 @@ export class ProviderRegistry {
   ): EmailProvider | SmsProvider | PushProvider | WhatsAppProvider {
     const secret = this.secrets.decrypt(mapping.secretRef);
 
-    switch (mapping.providerType) {
-      case ProviderType.SES: {
+    // Tipos genéricos (3): EMAIL | SMS | WHATSAPP. Los valores antiguos
+    // (SES/SMTP/TWILIO/WHATSAPP_CLOUD/SENDGRID/INFOBIP/FCM) se aceptan como
+    // alias de lectura para no romper proveedores ya guardados en la BD.
+    switch (mapping.providerType as string) {
+      case ProviderType.EMAIL:
+      case 'SES':
+      case 'SMTP': {
         if (mapping.config.transport === 'smtp') {
           const fromAddress = mapping.config.fromAddress ?? mapping.config.from;
           const port = Number(mapping.config.port ?? 587);
@@ -188,41 +198,32 @@ export class ProviderRegistry {
           secretRef: mapping.secretRef,
         } as SesAdapterConfig);
       }
-      case ProviderType.SENDGRID:
+      case 'SENDGRID':
         return new SendGridAdapter(
           { ...mapping.config, apiKey: secret },
           this.secrets.isEncrypted(mapping.secretRef)
             ? undefined
             : mapping.secretRef,
         );
-      case ProviderType.TWILIO:
+      case ProviderType.SMS:
+      case 'TWILIO':
         return new TwilioAdapter({
           ...mapping.config,
           authToken: secret,
         } as unknown as TwilioAdapterConfig);
-      case ProviderType.INFOBIP:
+      case 'INFOBIP':
         return new InfobipAdapter(
           { ...mapping.config, apiKey: secret },
           this.secrets.isEncrypted(mapping.secretRef)
             ? undefined
             : mapping.secretRef,
         );
-      case ProviderType.FCM:
+      case 'FCM':
         return new FcmAdapter({
           serviceAccountKey: mapping.config.serviceAccountKey,
         } as FcmAdapterConfig);
-      case ProviderType.SMTP: {
-        const fromAddress = mapping.config.fromAddress ?? mapping.config.from;
-        return new SmtpAdapter({
-          endpoint: String(mapping.config.endpoint ?? ''),
-          port: Number(mapping.config.port ?? 587),
-          username: String(mapping.config.username ?? ''),
-          password: secret,
-          fromAddress:
-            fromAddress !== undefined ? String(fromAddress) : undefined,
-        } satisfies SmtpAdapterConfig);
-      }
-      case ProviderType.WHATSAPP_CLOUD:
+      case ProviderType.WHATSAPP:
+      case 'WHATSAPP_CLOUD':
         return new WhatsAppCloudAdapter({
           phoneNumberId: String(mapping.config.phoneNumberId ?? ''),
           accessToken: secret,

@@ -2,13 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { NotificationTemplateEntity } from '../../domain/entities/template.entity';
 import { NotificationTemplateVersionEntity } from '../../domain/entities/template-version.entity';
-import { ChannelType } from '../../../notifications/domain/enums';
+import {
+  ChannelType,
+  TemplateStatus,
+} from '../../../notifications/domain/enums';
 
 export interface CreateTemplateInput {
   tenantId: string;
   applicationId: string;
   code: string;
   description?: string;
+  fromEmail?: string | null;
   versions: {
     version: number;
     language: string;
@@ -32,6 +36,8 @@ export class CreateTemplateUseCase {
         applicationId: input.applicationId,
         code: input.code,
         description: input.description ?? null,
+        fromEmail: input.fromEmail ?? null,
+        status: TemplateStatus.ACTIVE,
       });
       const saved = await manager.save(template);
 

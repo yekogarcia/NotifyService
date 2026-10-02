@@ -151,7 +151,18 @@ curl -X PATCH "http://localhost:3000/api/v1/templates/reservation.confirmed/vers
 ## Paso 4 — Configurar proveedores por canal
 
 El sistema necesita saber qué proveedor usar para cada canal.
-Inicialmente: EMAIL → SES, SMS → Twilio, PUSH → FCM.
+Tipos soportados (4): `SES` = EMAIL SES, `SMTP` = EMAIL SMTP,
+`TWILIO` = SMS, `WHATSAPP_CLOUD` = WHATSAPP.
+En Swagger (`/docs` → tag `providers`) el POST trae desplegable
+"Examples" con el `config` + `secret` de cada tipo; el secreto
+(password/token) va en `secret` (se cifra AES-256-GCM), nunca en `config`.
+
+| Tipo | `config` | `secret` | Canal sugerido |
+|------|----------|----------|----------------|
+| EMAIL SES (`SES`) | `{ transport: "smtp", host, port: 587, secure: false, starttls: true, username, fromAddress }` | password SMTP de SES | EMAIL |
+| EMAIL SMTP (`SMTP`) | `{ transport: "smtp", host, port, secure, starttls, username, fromAddress }` | password SMTP | EMAIL |
+| SMS (`TWILIO`) | `{ accountSid, fromNumber }` | AuthToken Twilio | SMS |
+| WHATSAPP (`WHATSAPP_CLOUD`) | `{ phoneNumberId, apiVersion: "v21.0" }` | access token permanente de Meta | WHATSAPP |
 
 ### 4a. Crear proveedor SES (Email)
 
@@ -195,7 +206,55 @@ curl -X POST http://localhost:3000/api/v1/providers \
   }'
 ```
 
-### 4d. Mapear proveedor a canal
+### 4d. Listar proveedores del tenant
+
+```bash
+curl http://localhost:3000/api/v1/providers \
+  -H "X-API-Key: dev-api-key"
+# o con JWT admin: -H "Authorization: Bearer <token>"
+```
+
+**Respuesta esperada (200 OK):** array con todos los campos del proveedor.
+`host`, `port` y demás viven en la columna `config` (jsonb) y el GET los
+devuelve **expandidos a nivel superior** (además de anidados en `config`).
+El secreto nunca sale en plano: `secretRef` viene como `***encrypted***`
+y `hasSecret: true` cuando está cifrado.
+
+```json
+[
+  {
+    "id": "uuid-del-provider",
+    "tenantId": "uuid-del-tenant",
+    "name": "AWS SES SMTP",
+    "providerType": "SES",
+    "transport": "smtp",
+    "host": "email-smtp.us-east-1.amazonaws.com",
+    "port": 587,
+    "username": "smtp-user",
+    "fromAddress": "contacto@example.com",
+    "config": {
+      "transport": "smtp",
+      "host": "email-smtp.us-east-1.amazonaws.com",
+      "port": 587,
+      "username": "smtp-user",
+      "fromAddress": "contacto@example.com"
+    },
+    "secretRef": "***encrypted***",
+    "hasSecret": true,
+    "isActive": true,
+    "createdAt": "2026-09-28T10:00:00.000Z",
+    "updatedAt": "2026-09-28T10:00:00.000Z"
+  }
+]
+```
+
+```bash
+# Detalle de un proveedor
+curl http://localhost:3000/api/v1/providers/<provider-id> \
+  -H "X-API-Key: dev-api-key"
+```
+
+### 4e. Mapear proveedor a canal
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/providers/<provider-id>/channels \

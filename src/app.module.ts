@@ -8,7 +8,7 @@ import { DeliveriesModule } from './modules/deliveries/deliveries.module';
 import { TemplatesModule } from './modules/templates/templates.module';
 import { PreferencesModule } from './modules/preferences/preferences.module';
 import { ProvidersModule } from './modules/providers/providers.module';
-import { TenantsModule } from './modules/tenants/tenants.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';import { TenantsModule } from './modules/tenants/tenants.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DatabaseModule } from './shared/infrastructure/database/database.module';
@@ -27,6 +27,7 @@ import { DeviceEntity } from './modules/preferences/domain/entities/device.entit
 import { TenantEntity } from './modules/tenants/domain/entities/tenant.entity';
 import { ApplicationEntity } from './modules/applications/domain/entities/application.entity';
 import { OAuthTokenEntity } from './modules/auth/domain/entities/oauth-token.entity';
+import { NotificationEventEntity } from './modules/notifications/domain/entities/notification-event.entity';
 import { AuthGuard } from './shared/infrastructure/guards/auth.guard';
 
 @Module({
@@ -50,6 +51,7 @@ import { AuthGuard } from './shared/infrastructure/guards/auth.guard';
           ProviderChannelEntity,
           PreferenceEntity,
           DeviceEntity,
+          NotificationEventEntity,
         ],
         synchronize: false,
         logging: process.env.NODE_ENV === 'development',
@@ -67,6 +69,7 @@ import { AuthGuard } from './shared/infrastructure/guards/auth.guard';
     TemplatesModule,
     PreferencesModule,
     ProvidersModule,
+    DashboardModule,
   ],
   providers: [
     {

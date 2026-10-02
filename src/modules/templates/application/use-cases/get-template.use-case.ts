@@ -25,4 +25,12 @@ export class GetTemplateUseCase {
 
     return template;
   }
+
+  async list(tenantId: string): Promise<NotificationTemplateEntity[]> {
+    return this.templateRepo.find({
+      where: { tenantId },
+      relations: ['versions'],
+      order: { code: 'ASC' },
+    });
+  }
 }

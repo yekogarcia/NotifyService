@@ -9,11 +9,31 @@
 
 ## Plan Activo
 
-_(sin planes activos — ver Historial)_
+### [EN PROGRESO] GET providers por tenant (2026-09-28)
+
+- [x] `GET /api/v1/providers` — lista del tenant del JWT, ordenados por creación DESC, con `sanitize()` (sin secreto en plano: `secretRef: ***encrypted***` + `hasSecret`)
+- [x] `GET /api/v1/providers/:id` — detalle por tenant, 404 si no existe
+- [x] Revisión migración 0008: `host`/`port`/demás viven en columna `config` (jsonb, sin columnas propias) → `sanitize()` ahora expande `config` a nivel superior (conserva `config` anidado para el contrato POST/PUT; explícitos prevalecen)
+- [x] Docs `api-guide.md` (paso 4d/4e + ejemplo) + build, lint, 84 tests OK
 
 ---
 
 ## Historial
+
+### [COMPLETADO] Tipos de proveedor genéricos EMAIL/SMS/WHATSAPP (2026-09-30)
+
+### [COMPLETADO] POST /notifications con login password/admin (2026-10-01)
+- `CreateNotificationDTO.applicationId?` (UUID opcional): con token client_credentials se toma del JWT (si se envía debe coincidir, si no 400); con token admin es obligatorio y debe pertenecer al tenant (si no 404)
+- `NotificationsModule` registra `ApplicationEntity`; controller valida app del tenant antes de encolar
+- Verificación: `nest build` OK, unit notifications 12/12 OK, swagger en vivo verificado
+
+### [COMPLETADO] Retry deliveries + listado real de notificaciones (2026-10-01)
+- `DeliveryController` registrado en `DeliveriesModule` (causa del 404 `Cannot POST /deliveries/:id/retry`)
+- `GET /notifications` real: tenant del JWT, `page/limit` (máx 100), filtros `status`, `applicationId`, `date=YYYY-MM-DD` (día UTC), `{ items, page, limit, total }` con deliveries para los badges de canal
+- Verificación: `nest build` OK, arranque verificado en instancia temporal (rutas en swagger)- `ProviderType` → EMAIL/SMS/WHATSAPP (el vendedor puede cambiar sin cambiar el tipo)
+- `ProviderRegistry`: casos genéricos + alias de lectura legacy (SES/SMTP/TWILIO/WHATSAPP_CLOUD/SENDGRID/INFOBIP/FCM) para filas ya guardadas; `POST/PUT` solo validan los 3 nuevos
+- Swagger reescrito sin marcas: EMAIL (smtp genérico), SMS (fromNumber + campos del proveedor), WHATSAPP (Meta)
+- Verificación: `nest build` OK, `jest tests/unit/providers` 6/6 OK
 
 ### [COMPLETADO] WhatsApp con Meta WhatsApp Cloud API (2026-09-23)
 

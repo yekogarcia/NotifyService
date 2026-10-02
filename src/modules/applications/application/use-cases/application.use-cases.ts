@@ -1,6 +1,18 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  Inject,
+} from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { ApplicationRepository } from '../../domain/repositories';
 import { ApplicationEntity } from '../../domain/entities/application.entity';
+import { NotificationEntity } from '../../../notifications/domain/entities/notification.entity';
+import { NotificationTemplateEntity } from '../../../templates/domain/entities/template.entity';
+import { PreferenceEntity } from '../../../preferences/domain/entities/preference.entity';
+import { DeviceEntity } from '../../../preferences/domain/entities/device.entity';
+import { NotificationEventEntity } from '../../../notifications/domain/entities/notification-event.entity';
+import { OAuthTokenEntity } from '../../../auth/domain/entities/oauth-token.entity';
 import {
   CreateApplicationDTO,
   UpdateApplicationDTO,
@@ -139,6 +151,7 @@ export class DeleteApplicationUseCase {
   constructor(
     @Inject('ApplicationRepository')
     private readonly appRepo: ApplicationRepository,
+    private readonly dataSource: DataSource,
   ) {}
 
   async execute(tenantId: string, id: string): Promise<void> {
@@ -146,7 +159,35 @@ export class DeleteApplicationUseCase {
     if (!app || app.tenantId !== tenantId) {
       throw new NotFoundException(`Application with id "${id}" not found`);
     }
+    // Solo se puede eliminar si no está asociada a nada. Los FK son
+    // ON DELETE CASCADE: borrar sin este cheque arrastraría notificaciones,
+    // plantillas, preferencias, dispositivos, eventos y tokens.
+    const blocking = await this.findAssociations(id);
+    const entries = Object.entries(blocking).filter(([, count]) => count > 0);
+    if (entries.length > 0) {
+      const detail = entries.map(([key, count]) => `${key} (${count})`).join(', ');
+      throw new ConflictException({
+        message: `Cannot delete application with associated records: ${detail}`,
+        blocking: Object.fromEntries(entries),
+      });
+    }
     await this.appRepo.delete(id);
+  }
+
+  private async findAssociations(
+    applicationId: string,
+  ): Promise<Record<string, number>> {
+    const where = { where: { applicationId } };
+    const [notifications, templates, preferences, devices, events, tokens] =
+      await Promise.all([
+        this.dataSource.getRepository(NotificationEntity).count(where),
+        this.dataSource.getRepository(NotificationTemplateEntity).count(where),
+        this.dataSource.getRepository(PreferenceEntity).count(where),
+        this.dataSource.getRepository(DeviceEntity).count(where),
+        this.dataSource.getRepository(NotificationEventEntity).count(where),
+        this.dataSource.getRepository(OAuthTokenEntity).count(where),
+      ]);
+    return { notifications, templates, preferences, devices, events, tokens };
   }
 }
 

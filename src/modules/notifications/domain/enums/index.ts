@@ -41,13 +41,20 @@ export enum AttemptResult {
 }
 
 export enum ProviderType {
-  SES = 'SES',
-  TWILIO = 'TWILIO',
-  FCM = 'FCM',
-  SENDGRID = 'SENDGRID',
-  INFOBIP = 'INFOBIP',
-  SMTP = 'SMTP',
-  WHATSAPP_CLOUD = 'WHATSAPP_CLOUD',
+  EMAIL = 'EMAIL',
+  SMS = 'SMS',
+  WHATSAPP = 'WHATSAPP',
+}
+
+export enum ProviderStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  DELETED = 'DELETED',
+}
+
+export enum TemplateStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
 }
 
 export enum EventType {

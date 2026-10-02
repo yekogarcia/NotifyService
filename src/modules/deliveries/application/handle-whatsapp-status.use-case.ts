@@ -3,6 +3,7 @@ import { Inject } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { DeliveryRepository } from '../../notifications/domain/repositories';
 import { DeliveryStatus } from '../../notifications/domain/enums';
+import { RefreshNotificationStatusUseCase } from '../../notifications/application/refresh-notification-status';
 import { isValidTransition } from '../domain/delivery-status';
 
 export interface WhatsappStatusUpdate {
@@ -37,6 +38,7 @@ export class HandleWhatsappStatusUseCase {
   constructor(
     @Inject('DeliveryRepository')
     private readonly deliveryRepo: DeliveryRepository,
+    private readonly refreshStatus: RefreshNotificationStatusUseCase,
   ) {}
 
   parseStatuses(payload: WhatsappWebhookPayload): WhatsappStatusUpdate[] {
@@ -108,6 +110,7 @@ export class HandleWhatsappStatusUseCase {
     }
 
     await this.deliveryRepo.updateStatus(delivery.id, target);
+    await this.refreshStatus.refresh(delivery.notificationId);
     this.logger.log(
       `Delivery ${delivery.id} → ${target} via WhatsApp webhook (${update.wamid})`,
     );

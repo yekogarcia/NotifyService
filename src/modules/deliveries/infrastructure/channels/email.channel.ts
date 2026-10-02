@@ -34,6 +34,7 @@ export class EmailChannel implements NotificationChannel {
       context.to,
       context.subject ?? '',
       context.body,
+      context.from,
     );
     return {
       success: result.success,

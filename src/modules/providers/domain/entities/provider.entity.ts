@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-import { ProviderType } from '../../../notifications/domain/enums';
+import { ProviderType, ProviderStatus } from '../../../notifications/domain/enums';
 
 @Entity('notification_providers')
 @Index('idx_provider_tenant_type', ['tenantId', 'providerType'])
@@ -31,6 +31,13 @@ export class NotificationProviderEntity {
 
   @Column({ type: 'boolean', name: 'is_active', default: true })
   isActive!: boolean;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: ProviderStatus.ACTIVE,
+  })
+  status!: ProviderStatus;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

@@ -4,9 +4,14 @@ import { DataSource } from 'typeorm';
 import { TemplateController } from './interfaces/controllers/template.controller';
 import { NotificationTemplateEntity } from './domain/entities/template.entity';
 import { NotificationTemplateVersionEntity } from './domain/entities/template-version.entity';
+import { NotificationEntity } from '../notifications/domain/entities/notification.entity';
 import { CreateTemplateUseCase } from './application/use-cases/create-template.use-case';
 import { UpdateTemplateVersionUseCase } from './application/use-cases/update-template-version.use-case';
 import { GetTemplateUseCase } from './application/use-cases/get-template.use-case';
+import {
+  UpdateTemplateUseCase,
+  DeleteTemplateUseCase,
+} from './application/use-cases/manage-template.use-case';
 import { HandlebarsRenderer } from './infrastructure/handlebars-renderer';
 import { ValidateVariablesUseCase } from './application/validate-variables';
 import { LocaleResolverUseCase } from './application/locale-resolver';
@@ -16,6 +21,7 @@ import { LocaleResolverUseCase } from './application/locale-resolver';
     TypeOrmModule.forFeature([
       NotificationTemplateEntity,
       NotificationTemplateVersionEntity,
+      NotificationEntity,
     ]),
   ],
   controllers: [TemplateController],
@@ -31,6 +37,8 @@ import { LocaleResolverUseCase } from './application/locale-resolver';
       inject: [DataSource],
     },
     UpdateTemplateVersionUseCase,
+    UpdateTemplateUseCase,
+    DeleteTemplateUseCase,
     GetTemplateUseCase,
     ValidateVariablesUseCase,
     LocaleResolverUseCase,

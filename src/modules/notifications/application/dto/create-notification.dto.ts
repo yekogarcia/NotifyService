@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsArray,
   IsOptional,
+  IsUUID,
   ValidateNested,
   ArrayMinSize,
   IsEnum,
@@ -37,6 +38,17 @@ export class RecipientDTO {
 }
 
 export class CreateNotificationDTO {
+  @ApiPropertyOptional({
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description:
+      'Application UUID. Obligatorio con token admin (login password); ' +
+      'con token client_credentials se toma del JWT (si se envía debe coincidir). ' +
+      'La aplicación debe pertenecer al tenant del token.',
+  })
+  @IsOptional()
+  @IsUUID()
+  applicationId?: string;
+
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
@@ -47,10 +59,16 @@ export class CreateNotificationDTO {
   @IsNotEmpty()
   eventType!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({
+    example: 'res-1001',
+    description:
+      'Clave anti-duplicados (única por tenant+app). Si se reintenta crear ' +
+      'con la misma clave, responde la notificación existente sin duplicar ' +
+      'envíos. Opcional: si se omite, el servidor genera un UUID.',
+  })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  idempotencyKey!: string;
+  idempotencyKey?: string;
 
   @ApiPropertyOptional({ type: RecipientDTO })
   @IsOptional()

@@ -8,6 +8,7 @@ import {
   Unique,
 } from 'typeorm';
 import { NotificationTemplateVersionEntity } from './template-version.entity';
+import { TemplateStatus } from '../../../notifications/domain/enums';
 
 @Entity('notification_templates')
 @Unique('uq_template_tenant_app_code', ['tenantId', 'applicationId', 'code'])
@@ -26,6 +27,16 @@ export class NotificationTemplateEntity {
 
   @Column({ type: 'text', nullable: true })
   description!: string | null;
+
+  @Column({ type: 'varchar', length: 255, name: 'from_email', nullable: true })
+  fromEmail!: string | null;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: TemplateStatus.ACTIVE,
+  })
+  status!: TemplateStatus;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

@@ -6,5 +6,10 @@ export interface ProviderResult {
 }
 
 export interface EmailProvider {
-  sendEmail(to: string, subject: string, body: string): Promise<ProviderResult>;
+  sendEmail(
+    to: string,
+    subject: string,
+    body: string,
+    from?: string,
+  ): Promise<ProviderResult>;
 }

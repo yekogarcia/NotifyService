@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotificationTemplateVersionEntity } from '../../../../templates/domain/entities/template-version.entity';
-import { ChannelType } from '../../../domain/enums';
+import { ChannelType, TemplateStatus } from '../../../domain/enums';
 
 @Injectable()
 export class ValidateTemplateUseCase {
@@ -20,7 +20,11 @@ export class ValidateTemplateUseCase {
     for (const channel of channels) {
       const version = await this.versionRepo.findOne({
         where: {
-          template: { tenantId, code: templateCode },
+          template: {
+            tenantId,
+            code: templateCode,
+            status: TemplateStatus.ACTIVE,
+          },
           language,
           channel,
           isActive: true,

@@ -14,6 +14,7 @@ export interface SendContext {
   body: string;
   language?: string;
   templateParams?: string[];
+  from?: string;
 }
 
 export interface NotificationChannel {

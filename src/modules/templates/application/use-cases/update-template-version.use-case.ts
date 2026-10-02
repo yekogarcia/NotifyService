@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { NotificationTemplateVersionEntity } from '../../domain/entities/template-version.entity';
@@ -43,6 +43,51 @@ export class UpdateTemplateVersionUseCase {
       target.activatedAt = new Date();
       return manager.save(target);
     });
+  }
+
+  async updateContent(
+    templateId: string,
+    version: number,
+    language: string,
+    channel: ChannelType,
+    input: { subject?: string | null; body?: string; language?: string; channel?: ChannelType },
+  ): Promise<NotificationTemplateVersionEntity> {
+    const target = await this.versionRepo.findOne({
+      where: { templateId, version, language, channel },
+    });
+
+    if (!target) {
+      throw new BadRequestException('Template version not found');
+    }
+
+    // Idioma/canal identifican la versión (único por template+versión+idioma+canal):
+    // al cambiarlos se valida que no exista ya esa combinación.
+    const nextLanguage = input.language ?? target.language;
+    const nextChannel = input.channel ?? target.channel;
+    if (
+      nextLanguage !== target.language ||
+      nextChannel !== target.channel
+    ) {
+      const clash = await this.versionRepo.findOne({
+        where: {
+          templateId,
+          version: target.version,
+          language: nextLanguage,
+          channel: nextChannel,
+        },
+      });
+      if (clash && clash.id !== target.id) {
+        throw new ConflictException(
+          `Version ${target.version} already exists for language "${nextLanguage}" channel "${nextChannel}"`,
+        );
+      }
+      target.language = nextLanguage;
+      target.channel = nextChannel;
+    }
+
+    if (input.subject !== undefined) target.subject = input.subject;
+    if (input.body !== undefined) target.body = input.body;
+    return this.versionRepo.save(target);
   }
 
   async deactivate(

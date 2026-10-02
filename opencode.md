@@ -191,32 +191,42 @@ All routes prefixed with `/api/v1`.
 | GET | `/applications/:id` | Bearer | Get by ID |
 | PATCH | `/applications/:id` | Bearer | Update |
 | DELETE | `/applications/:id` | Bearer | Delete |
+| DELETE | `/applications/:id` | Bearer | Delete (204; blocked with 409 + `blocking` detail if linked to notifications, templates, preferences, devices, events or tokens — FKs are CASCADE) |
 | POST | `/applications/:id/rotate-secret` | Bearer | Rotate secret |
 
 ### Notifications (Protected)
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
-| POST | `/notifications` | Bearer | Create (202 Accepted) |
+| POST | `/notifications` | Bearer | Create (202 Accepted; `idempotencyKey` optional — server generates UUID if omitted; admin/password envía `applicationId` en body validada contra el tenant) |
 | GET | `/notifications/:id` | Bearer | Get with deliveries+attempts |
-| GET | `/notifications` | Bearer | List (pagination stub) |
+| GET | `/notifications` | Bearer | List tenant con paginación (`page/limit`, máx 100) + filtros `status`, `applicationId`, `date=YYYY-MM-DD` (día UTC); responde `{ items, page, limit, total }` |
 
 ### Templates (Protected)
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
-| POST | `/templates` | Bearer | Create with versions |
+| POST | `/templates` | Bearer | Create with versions (status ACTIVE; optional `fromEmail` sender override for EMAIL) |
+| GET | `/templates` | Bearer | List with versions |
 | GET | `/templates/:code` | Bearer | Get by code |
-| PATCH | `/templates/:code/versions/:version/activate` | Bearer | Activate version |
+| PATCH | `/templates/:code` | Bearer | Update description / status ACTIVE\|INACTIVE (blocks sending when INACTIVE; `?applicationId` if code exists in several apps) |
+| DELETE | `/templates/:code` | Bearer | Delete template + versions (CASCADE) only if no notification uses the code (409 + usage otherwise) |
+| PATCH | `/templates/:code/versions/:version/activate` | Bearer | Activate version (tenant-scoped; 1 active per language+channel) |
 
 ### Providers (Protected)
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
 | POST | `/providers` | Bearer | Create (tenant from JWT; accepts `secret` encrypted at rest into `secretRef`, or plain `secretRef`) |
-| PUT | `/providers/:id` | Bearer | Update (re-encrypts if `secret` provided; responses mask secretRef) |
-| POST | `/providers/:id/channels` | Bearer | Map to channel (persists, 1 active per channel per tenant) |
+| GET | `/providers` | Bearer | List tenant providers (excludes `status=DELETED`; secrets masked; each item includes active `channels: []`) |
+| GET | `/providers/mappings` | Bearer | List provider↔channel mappings with provider info (1 active per channel) |
+| GET | `/providers/:id` | Bearer | Get by ID + active `channels` (404 if missing or DELETED) |
+| PUT | `/providers/:id` | Bearer | Update (re-encrypts if `secret` provided; accepts `status` ACTIVE/INACTIVE + `isActive` synced; responses mask secretRef) |
+| DELETE | `/providers/:id` | Bearer | Delete: hard delete if 0 deliveries use it (channel mappings cascade), else soft delete (`status=DELETED`, `isActive=false`, mappings deactivated, hidden from GET) |
+| POST | `/providers/:id/channels` | Bearer | Map to channel (persists, 1 active per channel per tenant; only ACTIVE providers) |
 
-**SES email sending:** create provider with `providerType: "SES"` and `config: { transport: "smtp", host, port, secure, starttls, username, fromAddress }`; the CSV password goes in `secret` (AES-256-GCM with `SECRETS_MASTER_KEY` → `enc:v1:` in `secret_ref` — no per-provider `.env` vars, DB alone is useless without the master key). `fromAddress` must be an identity verified in SES (e.g. `contacto@semic.com.co`). The registry builds a `SmtpAdapter` (nodemailer) when `transport === "smtp"`, otherwise falls back to the AWS SDK adapter. Delivery channels resolve the provider per `(tenant, channel)` via `ProviderRegistry` (Redis cache TTL 300s, invalidated on save), falling back to legacy env vars when no mapping exists.
+**Tipos de proveedor genéricos (3):** `EMAIL | SMS | WHATSAPP` — el vendedor concreto puede cambiar sin cambiar el tipo, solo cambia el contenido de `config`. Valores antiguos (`SES/SMTP/TWILIO/WHATSAPP_CLOUD/…`) se aceptan como alias de lectura en `ProviderRegistry` para no romper filas ya guardadas, pero `POST/PUT /providers` solo valida los 3 genéricos.
 
-**WhatsApp Cloud API sending (Meta):** create provider with `providerType: "WHATSAPP_CLOUD"` and `config: { phoneNumberId, apiVersion? }`; the permanent access token goes in `secret` (same AES-256-GCM encryption). Then `POST /providers/:id/channels` with `{ "channel": "WHATSAPP" }`. The registry builds a `WhatsAppCloudAdapter` (raw fetch to `graph.facebook.com`). Recipients need `phone` in E.164 (`+573001234567`). **Template convention for `channel=WHATSAPP` versions:** `subject` = Meta HSM template name (e.g. `order_created_es`) → sends `type: "template"` with ordered params extracted/rendered from `body` `{{vars}}` + `notification.data`; `subject: null` → free text (`type: "text"`, session window ≤24h). `language` must match the Meta template language code exactly. Status webhooks (`sent`/`delivered`/`failed`) arrive at `GET/POST /webhooks/whatsapp` (verify token `WHATSAPP_VERIFY_TOKEN`, optional HMAC `WHATSAPP_APP_SECRET`) and update the delivery by `provider_message_id` (wamid).
+**EMAIL sending:** create provider with `providerType: "EMAIL"` and `config: { transport: "smtp", host, port, secure, starttls, username, fromAddress }`; the SMTP password goes in `secret` (AES-256-GCM with `SECRETS_MASTER_KEY` → `enc:v1:` in `secret_ref` — no per-provider `.env` vars, DB alone is useless without the master key). `fromAddress` debe ser una identidad verificada en el servidor SMTP (p.ej. SES: `contacto@semic.com.co`). The registry builds a `SmtpAdapter` (nodemailer) when `transport === "smtp"`. Delivery channels resolve the provider per `(tenant, channel)` via `ProviderRegistry` (Redis cache TTL 300s, invalidated on save), falling back to legacy env vars when no mapping exists.
+
+**WhatsApp Cloud API sending (Meta):** create provider with `providerType: "WHATSAPP"` and `config: { phoneNumberId, apiVersion? }`; the permanent access token goes in `secret` (same AES-256-GCM encryption). Then `POST /providers/:id/channels` with `{ "channel": "WHATSAPP" }`. The registry builds a `WhatsAppCloudAdapter` (raw fetch to `graph.facebook.com`). Recipients need `phone` in E.164 (`+573001234567`). **Template convention for `channel=WHATSAPP` versions:** `subject` = Meta HSM template name (e.g. `order_created_es`) → sends `type: "template"` with ordered params extracted/rendered from `body` `{{vars}}` + `notification.data`; `subject: null` → free text (`type: "text"`, session window ≤24h). `language` must match the Meta template language code exactly. Status webhooks (`sent`/`delivered`/`failed`) arrive at `GET/POST /webhooks/whatsapp` (verify token `WHATSAPP_VERIFY_TOKEN`, optional HMAC `WHATSAPP_APP_SECRET`) and update the delivery by `provider_message_id` (wamid).
 
 ### Preferences (Protected)
 | Method | Route | Auth | Description |
@@ -233,7 +243,21 @@ All routes prefixed with `/api/v1`.
 ### Deliveries (Protected)
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
-| POST | `/deliveries/:id/retry` | Bearer | Retry failed delivery |
+| POST | `/deliveries/:id/retry` | Bearer | Retry failed delivery (reen cola `retry-delivery`; `DeliveryController` registrado en `DeliveriesModule`) |
+
+### Dashboard (Protected, tenant from JWT)
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| GET | `/dashboard/summary` | Bearer | KPIs: notifications, deliveries, sent/failed/pending/retried, successRate, avgAttempts, activeApps/Providers |
+| GET | `/dashboard/volume?granularity=day\|hour` | Bearer | Time series per bucket |
+| GET | `/dashboard/by-channel` | Bearer | Deliveries + success/failed % per channel |
+| GET | `/dashboard/by-application?limit=` | Bearer | Top apps by notifications + success rate |
+| GET | `/dashboard/by-provider` | Bearer | Per provider: deliveries, successRate, avgAttempts, lastErrorType (NULL provider = .env fallback) |
+| GET | `/dashboard/failures?limit=` | Bearer | Top errorTypes, result split (transient/permanent), recent failed deliveries |
+| GET | `/dashboard/latency` | Bearer | Created→sent avg/p50/p95 seconds per channel |
+| GET | `/dashboard/activity?limit=` | Bearer | Recent event feed |
+
+Common filters: `from`/`to` (ISO, default last 30d), `applicationId`, `channel`. All delivery metrics join through `notifications` (tenant-scoped). `DashboardModule` (`src/modules/dashboard/`) reads via `DataSource` raw SQL; in-memory `MetricsModule` services remain unwired (no tenant scope, volatile).
 
 ### Webhooks (Public)
 | Method | Route | Auth | Description |
@@ -257,7 +281,9 @@ DeliveryStatus:    CREATED | QUEUED | PROCESSING | SENT | DELIVERED | FAILED | R
 ChannelType:       EMAIL | SMS | PUSH | WHATSAPP | WEBHOOK | SLACK | TEAMS
 RecipientType:     INTERNAL_USER | EXTERNAL_USER | EMAIL | PHONE
 AttemptResult:     SUCCESS | TRANSIENT_ERROR | PERMANENT_ERROR
-ProviderType:      SES | TWILIO | FCM | SENDGRID | INFOBIP | SMTP | WHATSAPP_CLOUD
+ProviderType:      EMAIL | SMS | WHATSAPP (genéricos; alias de lectura legacy: SES/SMTP/TWILIO/WHATSAPP_CLOUD/SENDGRID/INFOBIP/FCM)
+ProviderStatus:    ACTIVE | INACTIVE | DELETED (`notification_providers.status`, synced with `is_active`; SMTP branch accepts `host` alias like SES)
+TemplateStatus:    ACTIVE | INACTIVE (`notification_templates.status`; INACTIVE blocks send at validate-time and in worker)
 EventType:         NOTIFICATION_CREATED | DELIVERY_QUEUED | ATTEMPT_STARTED | ATTEMPT_SUCCESS |
                    ATTEMPT_FAILED | DELIVERY_SENT | DELIVERY_DELIVERED | DELIVERY_FAILED | DLQ_ENTERED
 Platform:          IOS | ANDROID | WEB
@@ -331,7 +357,7 @@ npm run test           # Run Jest tests
 6. **Secret management:** `client_secret` hashed with argon2id; provider secrets encrypted with AES-256-GCM (`SECRETS_MASTER_KEY` in .env) and stored as `enc:v1:<iv>:<tag>:<data>` in `notification_providers.secret_ref`; non-sensitive refs (ARN, env var name) stored plain
 7. **Queue-based delivery:** BullMQ with Redis for async notification processing, retry with exponential backoff, dead letter queue for failed deliveries
 8. **Dynamic provider resolution:** at send time each channel asks `ProviderRegistry` for the active provider of `(tenantId, channel)` (Redis cache `provider:{tenantId}:{channel}`, TTL 300s, invalidated on config save); no mapping → legacy env-based adapter fallback. `delivery.provider_id` records which provider was used
-9. **WhatsApp (Meta Cloud API):** `WHATSAPP_CLOUD` provider + `WhatsappChannel`; HSM vs free-text selected by template version `subject` (Meta template name vs null); params rendered from `body` `{{vars}}` with `notification.data`; status correlation by wamid in `notification_deliveries.provider_message_id`; `notifications.language` (migración 0023) selects the active template version per language in the worker
+9. **WhatsApp (Meta Cloud API):** `WHATSAPP` provider + `WhatsappChannel`; HSM vs free-text selected by template version `subject` (Meta template name vs null); params rendered from `body` `{{vars}}` with `notification.data`; status correlation by wamid in `notification_deliveries.provider_message_id`; `notifications.language` (migración 0023) selects the active template version per language in the worker
 
 ---
 
@@ -360,6 +386,11 @@ npm run test           # Run Jest tests
 | 0021 | oauth_tokens | Create oauth_tokens (refresh tokens) |
 | 0022 | oauth_tokens | Make application_id nullable (password grant) |
 | 0023 | notifications | Add language column (NOT NULL, default 'es') |
+| 0024 | notification_providers | Add status column (NOT NULL, default 'ACTIVE'; backfills INACTIVE where is_active=false) |
+| 0025 | deliveries/attempts | Dashboard indexes: deliveries (created_at, channel, provider_id, notification+status), attempts (attempted_at) |
+| 0026 | notification_templates | Add status column (NOT NULL, default 'ACTIVE') + index (tenant_id, status) |
+| 0027 | notification_templates | Add from_email column (nullable sender override for EMAIL) |
+| 0028 | notifications | Backfill status from deliveries (QUEUED rows → SENT/DELIVERED/PROCESSING/FAILED) |
 
 ---
 
