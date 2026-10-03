@@ -8,13 +8,20 @@ export class RedisService {
   private readonly logger = new AppLoggerService();
 
   constructor() {
-    const url = process.env.REDIS_URL ?? 'redis://localhost:6379';
-    this.client = new IORedis(url, { maxRetriesPerRequest: null });
+    const { host, port, password } = this.resolveConnection();
+    this.client = new IORedis({
+      host,
+      port,
+      password,
+      maxRetriesPerRequest: null,
+    });
 
     this.client.on('connect', () =>
       this.logger.log('Redis connecting', {
         type: 'redis',
-        url: this.mask(url),
+        host,
+        port,
+        auth: password ? 'enabled' : 'disabled',
       }),
     );
     this.client.on('ready', () =>
@@ -54,7 +61,33 @@ export class RedisService {
     await this.client.quit();
   }
 
-  private mask(url: string): string {
-    return url.replace(/\/\/.*@/, '//***@');
+  private resolveConnection(): {
+    host: string;
+    port: number;
+    password?: string;
+  } {
+    const password = process.env.REDIS_PASS || undefined;
+
+    if (process.env.REDIS_HOST) {
+      return {
+        host: process.env.REDIS_HOST,
+        port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
+        password,
+      };
+    }
+
+    const url = process.env.REDIS_URL;
+    if (url) {
+      const clean = url
+        .replace(/^rediss?:\/\//, '')
+        .replace(/^[^@/]*@/, '')
+        .replace(/\/.*$/, '');
+      const [host, port] = clean.split(':');
+      if (host) {
+        return { host, port: parseInt(port ?? '6379', 10), password };
+      }
+    }
+
+    return { host: 'localhost', port: 6379, password };
   }
 }

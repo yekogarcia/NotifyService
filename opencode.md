@@ -313,7 +313,9 @@ CREATED → QUEUED → PROCESSING → SENT → DELIVERED
 ```env
 PORT=8080
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/notifications
-REDIS_URL=redis://localhost:6379
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASS=''
 API_KEY='dev-api-key'
 JWT_SECRET='dev-jwt-secret'
 DEFAULT_LANGUAGE='es'
