@@ -18,7 +18,6 @@ import { NOTIFICATION_QUEUE } from '../../../../../shared/infrastructure/queue/q
 import { Queue } from 'bullmq';
 import { RedisService } from '../../../../../shared/infrastructure/queue/redis.service';
 import { AppLoggerService } from '../../../../../shared/infrastructure/logger/logger.service';
-import { sanitizeForLog } from '../../../../../shared/infrastructure/logging/log-sanitizer';
 
 export interface CreateNotificationResult {
   notificationId: string;
@@ -59,16 +58,11 @@ export class CreateNotificationUseCase {
     const idempotencyKey = dto.idempotencyKey?.trim() || randomUUID();
 
     this.logger.log('Notification creation started', {
-      type: 'notification_create',
       correlationId,
       tenantId,
-      applicationId,
-      sourceSystem: dto.sourceSystem,
-      eventType: dto.eventType,
       templateCode: dto.templateCode,
       channels: dto.channels,
       recipientsCount: dto.recipient ? 1 : (dto.recipients?.length ?? 0),
-      language,
     });
 
     const existing = await this.idempotencyCheck.execute(
@@ -77,11 +71,8 @@ export class CreateNotificationUseCase {
     );
     if (existing) {
       this.logger.log('Notification already exists (idempotent hit)', {
-        type: 'notification_create',
-        correlationId: existing.correlationId,
         notificationId: existing.id,
-        status: existing.status,
-        idempotencyKey,
+        correlationId: existing.correlationId,
       });
       return {
         notificationId: existing.id,
@@ -154,11 +145,9 @@ export class CreateNotificationUseCase {
       await manager.save(NotificationDeliveryEntity, deliveries);
 
       this.logger.log('Notification persisted with deliveries', {
-        type: 'notification_create',
         correlationId,
         notificationId: saved.id,
         deliveriesCount: deliveries.length,
-        recipientsCount: savedRecipients.length,
       });
 
       return saved;
@@ -168,12 +157,8 @@ export class CreateNotificationUseCase {
     // (maxRetriesPerRequest=null) y el request termina en 504 en el proxy.
     // El log "enqueue attempt" sin su par "enqueue success/failed" lo delata.
     this.logger.log('Enqueueing notification job to Redis queue', {
-      type: 'queue_enqueue',
-      queue: NOTIFICATION_QUEUE,
-      correlationId,
       notificationId: notification.id,
     });
-    const enqueueStart = Date.now();
     try {
       const job = await this.queue.add(
         'process-notification',
@@ -181,36 +166,17 @@ export class CreateNotificationUseCase {
         { attempts: 3, backoff: { type: 'exponential', delay: 1000 } },
       );
       this.logger.log('Notification job enqueued', {
-        type: 'queue_enqueue',
-        queue: NOTIFICATION_QUEUE,
-        correlationId,
         notificationId: notification.id,
         jobId: job.id,
-        durationMs: Date.now() - enqueueStart,
       });
     } catch (error) {
       this.logger.error(
         'Failed to enqueue notification job (Redis down?)',
         error instanceof Error ? error.stack : String(error),
-        {
-          type: 'queue_enqueue',
-          queue: NOTIFICATION_QUEUE,
-          correlationId,
-          notificationId: notification.id,
-          durationMs: Date.now() - enqueueStart,
-          errorMessage: error instanceof Error ? error.message : String(error),
-        },
+        { notificationId: notification.id },
       );
       throw error;
     }
-
-    this.logger.log('Notification creation finished', {
-      type: 'notification_create',
-      correlationId,
-      notificationId: notification.id,
-      status: notification.status,
-      data: sanitizeForLog(dto.data),
-    });
 
     return {
       notificationId: notification.id,

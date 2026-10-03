@@ -43,7 +43,6 @@ export class DeliveryDispatcher {
     const delivery = await this.deliveryRepo.findById(deliveryId);
     if (!delivery) {
       this.logger.error('Delivery not found, cannot dispatch', undefined, {
-        type: 'delivery_dispatch',
         deliveryId,
       });
       throw new Error(`Delivery not found: ${deliveryId}`);
@@ -65,11 +64,9 @@ export class DeliveryDispatcher {
     const channel = this.channelRegistry.getChannel(delivery.channel);
 
     this.logger.log('Dispatching delivery to channel', {
-      type: 'delivery_dispatch',
       deliveryId,
       notificationId: delivery.notificationId,
       channel: delivery.channel,
-      to: renderedContent.to,
       attemptNumber: delivery.attemptCount + 1,
     });
 
@@ -96,12 +93,8 @@ export class DeliveryDispatcher {
         'Channel send threw an exception',
         error instanceof Error ? error.stack : String(error),
         {
-          type: 'delivery_dispatch',
           deliveryId,
-          notificationId: delivery.notificationId,
           channel: delivery.channel,
-          to: renderedContent.to,
-          errorMessage: result.errorMessage,
         },
       );
     }
@@ -131,15 +124,10 @@ export class DeliveryDispatcher {
       await this.deliveryRepo.incrementAttemptCount(deliveryId);
       await this.deliveryRepo.updateStatus(deliveryId, DeliveryStatus.SENT);
       this.logger.log('Delivery sent successfully', {
-        type: 'delivery_dispatch',
         deliveryId,
         notificationId: delivery.notificationId,
         channel: delivery.channel,
-        to: renderedContent.to,
-        attemptNumber,
-        providerId: result.providerId,
         providerMessageId: result.providerMessageId,
-        newStatus: DeliveryStatus.SENT,
         durationMs: Date.now() - start,
       });
     } else {
@@ -147,17 +135,13 @@ export class DeliveryDispatcher {
       await this.attemptRepo.save(attempt);
       await this.deliveryRepo.incrementAttemptCount(deliveryId);
       await this.deliveryRepo.updateStatus(deliveryId, DeliveryStatus.FAILED);
-      this.logger.warn('Delivery failed', {
-        type: 'delivery_dispatch',
+      this.logger.error('Delivery failed', undefined, {
         deliveryId,
         notificationId: delivery.notificationId,
         channel: delivery.channel,
-        to: renderedContent.to,
         attemptNumber,
         errorType: result.errorType ?? 'unknown',
         errorMessage: result.errorMessage ?? 'no message',
-        newStatus: DeliveryStatus.FAILED,
-        durationMs: Date.now() - start,
       });
     }
     // La notificación agrega el estado de sus deliveries (si no, queda QUEUED).

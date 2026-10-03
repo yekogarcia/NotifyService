@@ -25,12 +25,8 @@ export class SmsChannel implements NotificationChannel {
     const candidate = resolved?.provider ?? this.fallback;
 
     this.logger.log('Sending via SMS channel', {
-      type: 'channel_send',
-      channel: ChannelType.SMS,
       deliveryId: context.deliveryId,
-      to: context.to,
       providerSource: resolved ? 'tenant_registry' : 'env_fallback',
-      providerId: resolved?.providerId,
     });
 
     if (!this.isSmsProvider(candidate)) {
@@ -38,8 +34,6 @@ export class SmsChannel implements NotificationChannel {
         'Resolved provider for SMS is not an SMS provider',
         undefined,
         {
-          type: 'channel_send',
-          channel: ChannelType.SMS,
           deliveryId: context.deliveryId,
           providerSource: resolved ? 'tenant_registry' : 'env_fallback',
         },

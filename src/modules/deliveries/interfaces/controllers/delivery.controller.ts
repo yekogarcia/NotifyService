@@ -25,13 +25,6 @@ export class DeliveryController {
   @ApiOperation({ summary: 'Manually retry a failed delivery' })
   @ApiResponse({ status: 200, description: 'Delivery re-queued' })
   async retry(@Param('id') id: string) {
-    this.logger.log('Enqueueing manual delivery retry to Redis queue', {
-      type: 'queue_enqueue',
-      queue: NOTIFICATION_QUEUE,
-      deliveryId: id,
-      manual: true,
-    });
-    const enqueueStart = Date.now();
     try {
       const job = await this.queue.add(
         'retry-delivery',
@@ -39,23 +32,14 @@ export class DeliveryController {
         { attempts: 3, backoff: { type: 'exponential', delay: 1000 } },
       );
       this.logger.log('Manual delivery retry enqueued', {
-        type: 'queue_enqueue',
-        queue: NOTIFICATION_QUEUE,
         deliveryId: id,
         jobId: job.id,
-        durationMs: Date.now() - enqueueStart,
       });
     } catch (error) {
       this.logger.error(
         'Failed to enqueue manual delivery retry (Redis down?)',
         error instanceof Error ? error.stack : String(error),
-        {
-          type: 'queue_enqueue',
-          queue: NOTIFICATION_QUEUE,
-          deliveryId: id,
-          durationMs: Date.now() - enqueueStart,
-          errorMessage: error instanceof Error ? error.message : String(error),
-        },
+        { deliveryId: id },
       );
       throw error;
     }

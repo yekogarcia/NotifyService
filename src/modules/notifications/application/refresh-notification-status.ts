@@ -58,11 +58,9 @@ export class RefreshNotificationStatusUseCase {
     if (next && next !== (notification.status as NotificationStatus)) {
       await this.notificationRepo.updateStatus(notificationId, next);
       this.logger.log('Notification status changed', {
-        type: 'notification_status',
         notificationId,
         previousStatus: notification.status,
         newStatus: next,
-        deliveries: { total, pending, failed, sent, delivered },
       });
       return next;
     }

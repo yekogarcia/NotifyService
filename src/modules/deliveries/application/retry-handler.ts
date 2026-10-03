@@ -29,26 +29,15 @@ export class RetryHandler {
   ): Promise<{ willRetry: boolean; delayMs: number }> {
     if (!this.policy.shouldRetry(result, currentAttemptCount)) {
       this.logger.warn('Delivery will NOT be retried', {
-        type: 'delivery_retry',
         deliveryId,
         attemptResult: result,
         currentAttemptCount,
-        reason: 'retry policy exhausted or result not retryable',
       });
       return { willRetry: false, delayMs: 0 };
     }
 
     const delay = this.backoff.getDelay(currentAttemptCount + 1);
 
-    this.logger.log('Enqueueing delivery retry', {
-      type: 'queue_enqueue',
-      queue: RETRY_QUEUE,
-      deliveryId,
-      attemptNumber: currentAttemptCount + 1,
-      delayMs: delay,
-    });
-
-    const enqueueStart = Date.now();
     try {
       const job = await this.retryQueue.add(
         'retry-delivery',
@@ -56,28 +45,17 @@ export class RetryHandler {
         { delay },
       );
 
-      this.logger.warn('Delivery retry scheduled', {
-        type: 'delivery_retry',
-        queue: RETRY_QUEUE,
+      this.logger.log('Delivery retry scheduled', {
         deliveryId,
         jobId: job.id,
         attemptNumber: currentAttemptCount + 1,
         delayMs: delay,
-        durationMs: Date.now() - enqueueStart,
       });
     } catch (error) {
       this.logger.error(
         'Failed to enqueue delivery retry (Redis down?)',
         error instanceof Error ? error.stack : String(error),
-        {
-          type: 'queue_enqueue',
-          queue: RETRY_QUEUE,
-          deliveryId,
-          attemptNumber: currentAttemptCount + 1,
-          delayMs: delay,
-          durationMs: Date.now() - enqueueStart,
-          errorMessage: error instanceof Error ? error.message : String(error),
-        },
+        { deliveryId },
       );
       throw error;
     }

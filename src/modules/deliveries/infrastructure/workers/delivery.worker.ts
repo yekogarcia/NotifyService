@@ -50,56 +50,29 @@ export class DeliveryWorker implements OnModuleDestroy {
 
     // Eventos de ciclo de vida del worker: si Redis falla o un job agota sus
     // reintentos, antes de esto NO quedaba ningún rastro en logs.
-    this.worker.on('ready', () =>
-      this.logger.log('Delivery worker online', {
-        type: 'queue_worker',
-        queue: NOTIFICATION_QUEUE,
-      }),
-    );
+    this.worker.on('ready', () => this.logger.log('Delivery worker online'));
     this.worker.on('error', (err) =>
-      this.logger.error(
-        'Delivery worker error (Redis connection?)',
-        err.stack,
-        {
-          type: 'queue_worker',
-          queue: NOTIFICATION_QUEUE,
-          errorMessage: err.message,
-        },
-      ),
+      this.logger.error('Delivery worker error', err.stack),
     );
     this.worker.on('failed', (job, err) =>
-      this.logger.error(
-        'Queue job definitively failed (attempts exhausted)',
-        err.stack,
-        {
-          type: 'queue_worker',
-          queue: NOTIFICATION_QUEUE,
-          jobId: job?.id,
-          jobName: job?.name,
-          attemptsMade: job?.attemptsMade,
-          data: sanitizeForLog(job?.data),
-          errorMessage: err.message,
-        },
-      ),
+      this.logger.error('Queue job definitively failed', err.stack, {
+        jobId: job?.id,
+        notificationId: job?.data?.notificationId,
+        deliveryId: job?.data?.deliveryId,
+        attemptsMade: job?.attemptsMade,
+      }),
     );
     this.worker.on('stalled', (jobId) =>
-      this.logger.warn('Queue job stalled (worker died mid-process?)', {
-        type: 'queue_worker',
-        queue: NOTIFICATION_QUEUE,
-        jobId,
-      }),
+      this.logger.warn('Queue job stalled', { jobId }),
     );
   }
 
   private async processJob(job: Job<QueueJobData>): Promise<void> {
     const start = Date.now();
     this.logger.log('Queue job received', {
-      type: 'queue_job',
-      queue: NOTIFICATION_QUEUE,
       jobId: job.id,
-      jobName: job.name,
-      attemptsMade: job.attemptsMade,
-      data: sanitizeForLog(job.data),
+      notificationId: job.data.notificationId,
+      deliveryId: job.data.deliveryId,
     });
 
     try {
@@ -110,19 +83,14 @@ export class DeliveryWorker implements OnModuleDestroy {
       } else if (notificationId) {
         await this.processNotification(notificationId);
       } else {
-        this.logger.warn('Job has no recognizable data', {
-          type: 'queue_job',
-          queue: NOTIFICATION_QUEUE,
+        this.logger.error('Job has no recognizable data', undefined, {
           jobId: job.id,
           data: sanitizeForLog(job.data),
         });
       }
 
       this.logger.log('Queue job completed', {
-        type: 'queue_job',
-        queue: NOTIFICATION_QUEUE,
         jobId: job.id,
-        jobName: job.name,
         durationMs: Date.now() - start,
       });
     } catch (error) {
@@ -130,14 +98,9 @@ export class DeliveryWorker implements OnModuleDestroy {
         'Queue job processing error (will retry if attempts remain)',
         error instanceof Error ? error.stack : String(error),
         {
-          type: 'queue_job',
-          queue: NOTIFICATION_QUEUE,
           jobId: job.id,
-          jobName: job.name,
-          attemptsMade: job.attemptsMade,
-          durationMs: Date.now() - start,
-          data: sanitizeForLog(job.data),
-          errorMessage: error instanceof Error ? error.message : String(error),
+          notificationId: job.data.notificationId,
+          deliveryId: job.data.deliveryId,
         },
       );
       throw error;
@@ -155,11 +118,8 @@ export class DeliveryWorker implements OnModuleDestroy {
     const language = notification.language ?? 'es';
 
     this.logger.log('Processing notification deliveries', {
-      type: 'queue_job',
       notificationId,
       deliveriesCount: notification.deliveries.length,
-      templateCode: notification.templateCode,
-      language,
     });
 
     for (const delivery of notification.deliveries) {
@@ -167,23 +127,29 @@ export class DeliveryWorker implements OnModuleDestroy {
         (r: NotificationRecipientEntity) => r.id === delivery.recipientId,
       );
       if (!recipient) {
-        this.logger.warn('Recipient not found for delivery, skipped', {
-          type: 'queue_job',
-          notificationId,
-          deliveryId: delivery.id,
-          recipientId: delivery.recipientId,
-        });
+        this.logger.error(
+          'Recipient not found for delivery, skipped',
+          undefined,
+          {
+            notificationId,
+            deliveryId: delivery.id,
+            recipientId: delivery.recipientId,
+          },
+        );
         continue;
       }
 
       const to = this.resolveRecipientAddress(delivery.channel, recipient);
       if (!to) {
-        this.logger.warn('No address for delivery channel, skipped', {
-          type: 'queue_job',
-          notificationId,
-          deliveryId: delivery.id,
-          channel: delivery.channel,
-        });
+        this.logger.error(
+          'No address for delivery channel, skipped',
+          undefined,
+          {
+            notificationId,
+            deliveryId: delivery.id,
+            channel: delivery.channel,
+          },
+        );
         continue;
       }
 
@@ -202,14 +168,17 @@ export class DeliveryWorker implements OnModuleDestroy {
       });
 
       if (!templateVersion) {
-        this.logger.warn('No active template version, delivery skipped', {
-          type: 'queue_job',
-          notificationId,
-          deliveryId: delivery.id,
-          templateCode: notification.templateCode,
-          channel: delivery.channel,
-          language,
-        });
+        this.logger.error(
+          'No active template version, delivery skipped',
+          undefined,
+          {
+            notificationId,
+            deliveryId: delivery.id,
+            templateCode: notification.templateCode,
+            channel: delivery.channel,
+            language,
+          },
+        );
         continue;
       }
 

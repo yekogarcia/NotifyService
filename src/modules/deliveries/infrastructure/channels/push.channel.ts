@@ -25,12 +25,8 @@ export class PushChannel implements NotificationChannel {
     const candidate = resolved?.provider ?? this.fallback;
 
     this.logger.log('Sending via PUSH channel', {
-      type: 'channel_send',
-      channel: ChannelType.PUSH,
       deliveryId: context.deliveryId,
-      to: context.to,
       providerSource: resolved ? 'tenant_registry' : 'env_fallback',
-      providerId: resolved?.providerId,
     });
 
     if (!this.isPushProvider(candidate)) {
@@ -38,8 +34,6 @@ export class PushChannel implements NotificationChannel {
         'Resolved provider for PUSH is not a push provider',
         undefined,
         {
-          type: 'channel_send',
-          channel: ChannelType.PUSH,
           deliveryId: context.deliveryId,
           providerSource: resolved ? 'tenant_registry' : 'env_fallback',
         },

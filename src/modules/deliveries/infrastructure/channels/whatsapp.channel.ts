@@ -25,13 +25,9 @@ export class WhatsappChannel implements NotificationChannel {
     const candidate = resolved?.provider ?? this.fallback;
 
     this.logger.log('Sending via WHATSAPP channel', {
-      type: 'channel_send',
-      channel: ChannelType.WHATSAPP,
       deliveryId: context.deliveryId,
-      to: context.to,
       mode: context.subject ? 'template' : 'text',
       providerSource: resolved ? 'tenant_registry' : 'env_fallback',
-      providerId: resolved?.providerId,
     });
 
     if (!this.isWhatsAppProvider(candidate)) {
@@ -39,8 +35,6 @@ export class WhatsappChannel implements NotificationChannel {
         'Resolved provider for WHATSAPP is not a WhatsApp provider',
         undefined,
         {
-          type: 'channel_send',
-          channel: ChannelType.WHATSAPP,
           deliveryId: context.deliveryId,
           providerSource: resolved ? 'tenant_registry' : 'env_fallback',
         },

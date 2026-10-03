@@ -25,12 +25,8 @@ export class EmailChannel implements NotificationChannel {
     const candidate = resolved?.provider ?? this.fallback;
 
     this.logger.log('Sending via EMAIL channel', {
-      type: 'channel_send',
-      channel: ChannelType.EMAIL,
       deliveryId: context.deliveryId,
-      to: context.to,
       providerSource: resolved ? 'tenant_registry' : 'env_fallback',
-      providerId: resolved?.providerId,
     });
 
     if (!this.isEmailProvider(candidate)) {
@@ -38,8 +34,6 @@ export class EmailChannel implements NotificationChannel {
         'Resolved provider for EMAIL is not an email provider',
         undefined,
         {
-          type: 'channel_send',
-          channel: ChannelType.EMAIL,
           deliveryId: context.deliveryId,
           providerSource: resolved ? 'tenant_registry' : 'env_fallback',
         },
