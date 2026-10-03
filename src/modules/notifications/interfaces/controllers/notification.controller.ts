@@ -105,7 +105,8 @@ export class NotificationController {
     summary: 'List notifications with pagination and filters',
     description:
       'Solo del tenant del JWT, más recientes primero. `date=YYYY-MM-DD` ' +
-      'filtra por día UTC de creación.',
+      'filtra por día local de la app (zona horaria TIMEZONE, por defecto ' +
+      'America/Bogota), no por día UTC.',
   })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -115,7 +116,9 @@ export class NotificationController {
     name: 'date',
     required: false,
     type: String,
-    description: 'Día UTC YYYY-MM-DD (created_at >= día 00:00 y < día+1 00:00)',
+    description:
+      'Día local YYYY-MM-DD de la app (TIMEZONE, default America/Bogota): ' +
+      'createdAt >= día 00:00 local y < día+1 00:00 local, en UTC',
   })
   @ApiResponse({ status: 200, description: '{ items, page, limit, total }' })
   async findAll(
@@ -145,17 +148,49 @@ export class NotificationController {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         throw new BadRequestException('date debe ser YYYY-MM-DD');
       }
-      const [y, m, day] = date.split('-').map(Number);
-      const next = new Date(Date.UTC(y, m - 1, day) + 86_400_000)
-        .toISOString()
-        .slice(0, 10);
+      const { from, to } = this.zonedDayRange(date);
       qb.andWhere('n.createdAt >= :from AND n.createdAt < :to', {
-        from: `${date}T00:00:00.000Z`,
-        to: `${next}T00:00:00.000Z`,
+        from,
+        to,
       });
     }
 
     const [items, total] = await qb.getManyAndCount();
     return { items, page: current, limit: take, total };
+  }
+
+  private zonedDayRange(date: string): { from: Date; to: Date } {
+    const timeZone = process.env.TIMEZONE ?? 'America/Bogota';
+    const [y, m, d] = date.split('-').map(Number);
+    const startOf = (yy: number, mm: number, dd: number): Date => {
+      // Date.UTC desborda el día automáticamente (dd=32 → día 1 del mes siguiente)
+      const guess = Date.UTC(yy, mm - 1, dd);
+      try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone,
+          hour12: false,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }).formatToParts(new Date(guess));
+        const get = (type: string) =>
+          Number(parts.find((p) => p.type === type)!.value);
+        const asUTC = Date.UTC(
+          get('year'),
+          get('month') - 1,
+          get('day'),
+          get('hour') % 24,
+          get('minute'),
+          get('second'),
+        );
+        return new Date(guess - (asUTC - guess));
+      } catch {
+        return new Date(guess);
+      }
+    };
+    return { from: startOf(y, m, d), to: startOf(y, m, d + 1) };
   }
 }

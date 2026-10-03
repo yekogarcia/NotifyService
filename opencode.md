@@ -319,6 +319,7 @@ REDIS_PASS=''
 API_KEY='dev-api-key'
 JWT_SECRET='dev-jwt-secret'
 DEFAULT_LANGUAGE='es'
+TIMEZONE='America/Bogota'
 MAX_RETRY_ATTEMPTS='3'
 RATE_LIMIT_PER_MINUTE='100'
 # AES-256-GCM master key for provider secrets at rest (openssl rand -hex 32)
